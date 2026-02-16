@@ -1,5 +1,3 @@
-pub use crate::api::EventToUI;
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
 use crate::keyboard::input_source::{change_input_source, get_cur_session_input_source};
 #[cfg(target_os = "linux")]
 use crate::platform::linux::is_x11;
@@ -93,7 +91,11 @@ pub fn start_global_event_stream(s: StreamSink<String>, app_type: String) -> Res
 pub fn stop_global_event_stream(app_type: String) {
     super::flutter::stop_global_event_stream(app_type)
 }
-
+pub enum EventToUI {
+    Event(String),
+    Rgba(usize),
+    Texture(usize, bool), // (display, gpu_texture)
+}
 
 pub fn host_stop_system_key_propagate(_stopped: bool) {
     #[cfg(windows)]

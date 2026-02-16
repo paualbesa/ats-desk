@@ -1,6 +1,6 @@
 use crate::{
     client::*,
-    flutter_ffi::{EventToUI, SessionID},
+    api::{EventToUI, SessionID},
     ui_session_interface::{io_loop, InvokeUiSession, Session},
 };
 use flutter_rust_bridge::StreamSink;
