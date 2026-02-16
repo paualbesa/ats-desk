@@ -33,11 +33,11 @@ No se recomienda aún su uso en producción sin pruebas y validación adicionale
   - Técnicos con acceso prioritario a todas las explotaciones.
 - Soporte remoto a clientes:
   - Instalación del cliente ATS Desk en PCs de granja y ATS Monitor.
-  - Acceso controlado, con configuración mínima para el granjero.
+  - Acceso controlado, con configuración mínima para el granjero!
 
 ## Licencia
 
 Este proyecto es un fork de [RustDesk](https://github.com/rustdesk/rustdesk), que está licenciado bajo **AGPL-3.0**.  
 En consecuencia, ATS Desk se distribuye también bajo la licencia **AGPL-3.0**.
 
-Consulta el archivo `LICENSE` para más detalles.
+Consulta el archivo `LICENSE` para más detalles. 
