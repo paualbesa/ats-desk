@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:collection';
 
+import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:dynamic_layouts/dynamic_layouts.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -328,10 +330,11 @@ class _PeersViewState extends State<_PeersView>
   }
 
   /// Cuadrícula que se adapta al 100% del espacio: 1, 2 (2 filas), 2x2, 3x3, 4x4.
-  /// Las conexiones se abren en la ventana de pestañas (una sola ventana con varias pestañas).
+  /// Si un slot está asignado (ventana minimizada), se muestra _GridPreviewPlaceholder.
   Widget _buildFullscreenGridConnections() {
     return Obx(() {
       final n = gridMultiConnectionSize.value;
+      final assignments = stateGlobal.gridSlotAssignments;
       final rows = n <= 1 ? 1 : n <= 2 ? 2 : n <= 4 ? 2 : n <= 9 ? 3 : 4;
       final cols = n <= 1 ? 1 : n <= 2 ? 1 : n <= 4 ? 2 : n <= 9 ? 3 : 4;
       var index = 0;
@@ -344,6 +347,7 @@ class _PeersViewState extends State<_PeersView>
                   children: List.generate(cols, (c) {
                     if (index >= n) return const SizedBox.shrink();
                     final i = index++;
+                    final info = assignments[i];
                     return Expanded(
                       child: Padding(
                         padding: EdgeInsets.fromLTRB(
@@ -352,7 +356,14 @@ class _PeersViewState extends State<_PeersView>
                           space / 2,
                           space / 2,
                         ),
-                        child: _ConnectionCell(key: ValueKey('connection_cell_$i')),
+                        child: info != null
+                            ? _GridPreviewPlaceholder(
+                                key: ValueKey('grid_preview_$i'),
+                                slotIndex: i,
+                                windowId: info.windowId,
+                                peerId: info.peerId,
+                              )
+                            : _ConnectionCell(key: ValueKey('connection_cell_$i')),
                       ),
                     );
                   }),
@@ -581,6 +592,83 @@ class _ConnectionCellState extends State<_ConnectionCell> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Celda de la cuadrícula que muestra un hueco para la ventana minimizada (vista previa).
+/// Envía el rect en pantalla a la ventana remota para que se posicione aquí.
+class _GridPreviewPlaceholder extends StatefulWidget {
+  final int slotIndex;
+  final int windowId;
+  final String peerId;
+
+  const _GridPreviewPlaceholder({
+    Key? key,
+    required this.slotIndex,
+    required this.windowId,
+    required this.peerId,
+  }) : super(key: key);
+
+  @override
+  State<_GridPreviewPlaceholder> createState() => _GridPreviewPlaceholderState();
+}
+
+class _GridPreviewPlaceholderState extends State<_GridPreviewPlaceholder> {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reportRect();
+  }
+
+  void _reportRect() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final box = context.findRenderObject() as RenderBox?;
+      if (box != null && box.hasSize) {
+        final rect = box.localToGlobal(Offset.zero) & box.size;
+        DesktopMultiWindow.invokeMethod(
+          widget.windowId,
+          kWindowEventSetPreviewRect,
+          jsonEncode({
+            'left': rect.left,
+            'top': rect.top,
+            'width': rect.width,
+            'height': rect.height,
+          }),
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: theme.dividerColor.withOpacity(0.6), width: 1),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        alignment: Alignment.topCenter,
+        children: [
+          Positioned(
+            top: 4,
+            left: 6,
+            right: 6,
+            child: Text(
+              '${widget.slotIndex + 1} · ${widget.peerId}',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }

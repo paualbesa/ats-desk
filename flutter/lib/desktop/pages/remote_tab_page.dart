@@ -49,6 +49,9 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
   String? peerId;
   bool _isScreenRectSet = false;
   int? _display;
+  bool _isPreviewMode = false;
+  Rect? _savedFrameBeforePreview;
+  final _previewModeNotifier = ValueNotifier<bool>(false);
 
   var connectionMap = RxList<Widget>.empty(growable: true);
 
@@ -102,6 +105,7 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
           switchUuid: params['switch_uuid'],
           forceRelay: params['forceRelay'],
           isSharedPassword: params['isSharedPassword'],
+          previewModeListenable: _previewModeNotifier,
         ),
       ));
       _update_remote_count();
@@ -129,8 +133,31 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
   }
 
   @override
+  void dispose() {
+    stateGlobal.showMinimizeToGridDialogByWindow.remove(windowId());
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final child = Scaffold(
+    stateGlobal.showMinimizeToGridDialogByWindow[windowId()] = () {
+      if (tabController.state.value.tabs.isEmpty || !mounted) return;
+      _showMinimizeToGridDialog(context, tabController.state.value.selectedTabInfo.key);
+    };
+    final child = _isPreviewMode
+        ? Scaffold(
+            backgroundColor: Theme.of(context).colorScheme.background,
+            body: GestureDetector(
+              onDoubleTap: _restoreFromPreview,
+              child: Obx(() {
+                if (tabController.state.value.tabs.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+                return tabController.state.value.selectedTabInfo.page as Widget;
+              }),
+            ),
+          )
+        : Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       body: DesktopTab(
         controller: tabController,
@@ -286,6 +313,18 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
       menu.insert(1, splitAction);
     }
 
+    menu.insert(1, MenuEntryButton<String>(
+      childBuilder: (TextStyle? style) => Text(
+        localeName.startsWith('es') ? 'Minimizar a cuadrícula' : translate('Minimize to grid'),
+        style: style,
+      ),
+      proc: () async {
+        cancelFunc();
+        await _showMinimizeToGridDialog(context, key);
+      },
+      padding: padding,
+    ));
+
     if (perms['restart'] != false &&
         (pi.platform == kPeerPlatformLinux ||
             pi.platform == kPeerPlatformWindows ||
@@ -389,6 +428,96 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
     return widget.params["windowId"];
   }
 
+  Future<void> _showMinimizeToGridDialog(BuildContext context, String peerId) async {
+    String? raw;
+    try {
+      raw = await DesktopMultiWindow.invokeMethod(
+          kMainWindowId, kWindowEventGetGridSlotAssignments, null) as String?;
+    } catch (e) {
+      debugPrint('Get grid assignments failed: $e');
+      if (context.mounted) {
+        BotToast.showText(text: translate('Failed to get grid slots'));
+      }
+      return;
+    }
+    if (raw == null || !context.mounted) return;
+    Map<String, dynamic> data;
+    try {
+      data = jsonDecode(raw) as Map<String, dynamic>;
+    } catch (_) {
+      if (context.mounted) BotToast.showText(text: translate('Invalid response'));
+      return;
+    }
+    final assignments = (data['assignments'] as Map<String, dynamic>?) ?? {};
+    final gridSize = (data['gridSize'] as int?) ?? 4;
+    final slotCount = gridSize.clamp(1, 16);
+
+    int? selectedSlot;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setState) {
+            return AlertDialog(
+              title: Text(localeName.startsWith('es') ? 'Minimizar a cuadrícula' : translate('Minimize to grid')),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(slotCount, (i) {
+                    final slotIndex = i;
+                    final slotNum = i + 1;
+                    final entry = assignments[slotIndex.toString()];
+                    final occupied = entry != null;
+                    final freeLabel = localeName.startsWith('es') ? 'Libre' : translate('Free');
+                    final slotLabel = localeName.startsWith('es') ? 'Slot' : translate('Slot');
+                    final label = occupied
+                        ? (entry['peerId'] as String? ?? '${entry['windowId']}')
+                        : freeLabel;
+                    final isSelected = selectedSlot == slotIndex;
+                    return ListTile(
+                      title: Text('$slotLabel $slotNum: $label'),
+                      selected: isSelected,
+                      enabled: true,
+                      onTap: () => setState(() => selectedSlot = slotIndex),
+                    );
+                  }),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: Text(translate('Cancel')),
+                ),
+                FilledButton(
+                  onPressed: selectedSlot == null
+                      ? null
+                      : () => Navigator.of(ctx).pop(true),
+                  child: Text(translate('OK')),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    if (ok != true || selectedSlot == null || !context.mounted) return;
+    try {
+      await DesktopMultiWindow.invokeMethod(
+          kMainWindowId,
+          kWindowEventAssignGridSlot,
+          jsonEncode({
+            'slotIndex': selectedSlot,
+            'windowId': windowId(),
+            'peerId': peerId,
+          }));
+    } catch (e) {
+      debugPrint('Assign grid slot failed: $e');
+      if (context.mounted) {
+        BotToast.showText(text: translate('Failed to assign slot'));
+      }
+    }
+  }
+
   Future<bool> handleWindowCloseButton() async {
     final connLength = tabController.length;
     if (connLength == 1) {
@@ -475,6 +604,7 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
           switchUuid: switchUuid,
           forceRelay: args['forceRelay'],
           isSharedPassword: args['isSharedPassword'],
+          previewModeListenable: _previewModeNotifier,
         ),
       ));
     } else if (call.method == kWindowDisableGrabKeyboard) {
@@ -551,9 +681,48 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
       }
     } else if (call.method == kWindowEventSetFullscreen) {
       stateGlobal.setFullscreen(call.arguments == 'true');
+    } else if (call.method == kWindowEventSetPreviewRect) {
+      final args = jsonDecode(call.arguments as String) as Map<String, dynamic>;
+      final left = (args['left'] as num?)?.toDouble() ?? 0.0;
+      final top = (args['top'] as num?)?.toDouble() ?? 0.0;
+      final width = (args['width'] as num?)?.toDouble() ?? 400.0;
+      final height = (args['height'] as num?)?.toDouble() ?? 300.0;
+      final wc = WindowController.fromWindowId(windowId());
+      try {
+        final frame = await wc.getFrame();
+        if (frame != null) {
+          _savedFrameBeforePreview = frame;
+        }
+      } catch (_) {}
+      await wc.setFrame(Rect.fromLTWH(left, top, width, height));
+      await wc.showTitleBar(false);
+      _previewModeNotifier.value = true;
+      if (mounted) {
+        setState(() => _isPreviewMode = true);
+      }
     }
     _update_remote_count();
     return returnValue;
+  }
+
+  Future<void> _restoreFromPreview() async {
+    if (!_isPreviewMode) return;
+    try {
+      await DesktopMultiWindow.invokeMethod(
+          kMainWindowId, kWindowEventUnassignGridSlotByWindow, windowId());
+    } catch (e) {
+      debugPrint('Unassign grid slot failed: $e');
+    }
+    final wc = WindowController.fromWindowId(windowId());
+    if (_savedFrameBeforePreview != null) {
+      await wc.setFrame(_savedFrameBeforePreview!);
+      _savedFrameBeforePreview = null;
+    }
+    await wc.showTitleBar(true);
+    _previewModeNotifier.value = false;
+    if (mounted) {
+      setState(() => _isPreviewMode = false);
+    }
   }
 }
 

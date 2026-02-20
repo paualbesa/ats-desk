@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/common/widgets/peer_card.dart';
@@ -19,6 +21,14 @@ Color _peerStatusColor(Peer peer) {
   return Colors.red;
 }
 
+/// Indicador para filas de Direcciones (usan addressListOnlineStates + connected).
+Color _addressStatusColor(OperatorSharedEntry entry) {
+  if (stateGlobal.connectingPeerIds.contains(entry.id)) return Colors.orange;
+  if (stateGlobal.connectedPeerIds.contains(entry.id)) return Colors.green;
+  if (stateGlobal.addressListOnlineStates[entry.id] == true) return Colors.green;
+  return Colors.red;
+}
+
 /// Panel izquierdo con lista de direcciones: Favoritos, Historial, Libreta.
 /// Cada fila muestra indicador de estado (naranja/verde/rojo) y nombre o ID.
 class LeftPanelPeerList extends StatefulWidget {
@@ -29,12 +39,33 @@ class LeftPanelPeerList extends StatefulWidget {
 }
 
 class _LeftPanelPeerListState extends State<LeftPanelPeerList> {
+  Timer? _addressListOnlineTimer;
+
   @override
   void initState() {
     super.initState();
     bind.mainLoadRecentPeers();
     bind.mainLoadFavPeers();
     gFFI.abModel.pullAb(force: ForcePullAb.listAndCurrent, quiet: true);
+    // Empezar sin estado en caché para no mostrar verde hasta tener respuesta real
+    stateGlobal.addressListOnlineStates.clear();
+    _queryAddressListOnlines();
+    _addressListOnlineTimer = Timer.periodic(const Duration(seconds: 6), (_) {
+      _queryAddressListOnlines();
+    });
+  }
+
+  @override
+  void dispose() {
+    _addressListOnlineTimer?.cancel();
+    super.dispose();
+  }
+
+  void _queryAddressListOnlines() {
+    final ids = gFFI.operatorSharedListModel.entries.map((e) => e.id).toList();
+    if (ids.isNotEmpty) {
+      bind.queryOnlines(ids: ids);
+    }
   }
 
   @override
@@ -237,7 +268,7 @@ class _AddressRow extends StatelessWidget {
     final peer = Peer.fromJson({'id': entry.id, 'alias': entry.name});
     final displayName = entry.name.isEmpty ? entry.id : entry.name;
     return Obx(() {
-      final color = _peerStatusColor(peer);
+      final color = _addressStatusColor(entry);
       return Material(
         color: Colors.transparent,
         child: InkWell(

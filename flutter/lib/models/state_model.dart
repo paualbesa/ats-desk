@@ -1,4 +1,5 @@
 import 'package:desktop_multi_window/desktop_multi_window.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:get/get.dart';
 
@@ -6,6 +7,14 @@ import '../consts.dart';
 import './platform_model.dart';
 
 enum SvcStatus { notReady, connecting, ready }
+
+/// Info de un slot de la cuadrícula cuando hay una ventana minimizada.
+class GridSlotInfo {
+  final int windowId;
+  final String peerId;
+
+  GridSlotInfo({required this.windowId, required this.peerId});
+}
 
 class StateGlobal {
   int _windowId = -1;
@@ -39,6 +48,15 @@ class StateGlobal {
 
   /// IDs de peers con sesión de escritorio remoto abierta (para indicador verde en lista).
   final RxList<String> connectedPeerIds = RxList<String>();
+
+  /// Estado online por ID para la lista de Direcciones (actualizado por queryOnlines).
+  final RxMap<String, bool> addressListOnlineStates = <String, bool>{}.obs;
+
+  /// Slot index -> ventana minimizada (windowId, peerId). Solo en ventana principal.
+  final RxMap<int, GridSlotInfo> gridSlotAssignments = <int, GridSlotInfo>{}.obs;
+
+  /// Por windowId: callback para abrir el diálogo "Minimizar a cuadrícula" (solo ventana remota).
+  final Map<int, VoidCallback?> showMinimizeToGridDialogByWindow = {};
 
   // Use for desktop -> remote toolbar -> resolution
   final Map<String, Map<int, String?>> _lastResolutionGroupValues = {};

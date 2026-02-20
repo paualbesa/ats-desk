@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:desktop_multi_window/desktop_multi_window.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/scheduler.dart';
@@ -45,6 +46,8 @@ class RemotePage extends StatefulWidget {
     this.switchUuid,
     this.forceRelay,
     this.isSharedPassword,
+    this.previewMode = false,
+    this.previewModeListenable,
   }) : super(key: key) {
     initSharedStates(id);
   }
@@ -59,6 +62,10 @@ class RemotePage extends StatefulWidget {
   final String? switchUuid;
   final bool? forceRelay;
   final bool? isSharedPassword;
+  /// When true, only the canvas is shown (no toolbar). Can also be driven by [previewModeListenable].
+  final bool previewMode;
+  /// If set, [previewMode] is ignored and this listenable controls preview mode (e.g. minimize-to-grid).
+  final ValueListenable<bool>? previewModeListenable;
   final SimpleWrapper<State<RemotePage>?> _lastState = SimpleWrapper(null);
   final DesktopTabController? tabController;
 
@@ -353,6 +360,7 @@ class _RemotePageState extends State<RemotePage>
       );
 
   Widget buildBody(BuildContext context) {
+    Widget buildBodyInner(bool isPreview) {
     remoteToolbar(BuildContext context) => RemoteToolbar(
           id: widget.id,
           ffi: _ffi,
@@ -373,32 +381,36 @@ class _RemotePageState extends State<RemotePage>
         );
 
     bodyWidget() {
+      final canvas = Container(
+          color: kColorCanvas,
+          child: RawKeyFocusScope(
+              focusNode: _rawKeyFocusNode,
+              onFocusChange: (bool imageFocused) {
+                debugPrint(
+                    "onFocusChange(window active:${!_isWindowBlur}) $imageFocused");
+                // See [onWindowBlur].
+                if (isWindows) {
+                  if (_isWindowBlur) {
+                    imageFocused = false;
+                    Future.delayed(Duration.zero, () {
+                      _rawKeyFocusNode.unfocus();
+                    });
+                  }
+                  if (imageFocused) {
+                    _ffi.inputModel.enterOrLeave(true);
+                  } else {
+                    _ffi.inputModel.enterOrLeave(false);
+                  }
+                }
+              },
+              inputModel: _ffi.inputModel,
+              child: getBodyForDesktop(context)));
+      if (isPreview) {
+        return canvas;
+      }
       return Stack(
         children: [
-          Container(
-              color: kColorCanvas,
-              child: RawKeyFocusScope(
-                  focusNode: _rawKeyFocusNode,
-                  onFocusChange: (bool imageFocused) {
-                    debugPrint(
-                        "onFocusChange(window active:${!_isWindowBlur}) $imageFocused");
-                    // See [onWindowBlur].
-                    if (isWindows) {
-                      if (_isWindowBlur) {
-                        imageFocused = false;
-                        Future.delayed(Duration.zero, () {
-                          _rawKeyFocusNode.unfocus();
-                        });
-                      }
-                      if (imageFocused) {
-                        _ffi.inputModel.enterOrLeave(true);
-                      } else {
-                        _ffi.inputModel.enterOrLeave(false);
-                      }
-                    }
-                  },
-                  inputModel: _ffi.inputModel,
-                  child: getBodyForDesktop(context))),
+          canvas,
           Stack(
             children: [
               _ffi.ffiModel.pi.isSet.isTrue &&
@@ -467,6 +479,14 @@ class _RemotePageState extends State<RemotePage>
         }
       }),
     );
+    }
+    if (widget.previewModeListenable != null) {
+      return ValueListenableBuilder<bool>(
+        valueListenable: widget.previewModeListenable!,
+        builder: (_, isPreview, __) => buildBodyInner(isPreview),
+      );
+    }
+    return buildBodyInner(widget.previewMode);
   }
 
   @override

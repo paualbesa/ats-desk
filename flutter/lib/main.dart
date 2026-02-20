@@ -599,6 +599,20 @@ _registerEventHandler() {
       NativeUiHandler.instance.onEvent(evt);
     });
   }
+  // Estado online para la lista de Direcciones (panel izquierdo).
+  if (isDesktop) {
+    platformFFI.registerEventHandler(
+        'callback_query_onlines', 'address_list_online', (evt) async {
+      final onlines = (evt['onlines'] as String? ?? '').split(',').where((s) => s.isNotEmpty);
+      final offlines = (evt['offlines'] as String? ?? '').split(',').where((s) => s.isNotEmpty);
+      for (final id in offlines) {
+        stateGlobal.addressListOnlineStates[id] = false;
+      }
+      for (final id in onlines) {
+        stateGlobal.addressListOnlineStates[id] = true;
+      }
+    });
+  }
 }
 
 Widget keyListenerBuilder(BuildContext context, Widget? child) {

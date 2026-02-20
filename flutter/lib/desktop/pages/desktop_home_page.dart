@@ -13,6 +13,7 @@ import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/pages/connection_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_setting_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_tab_page.dart';
+import 'package:flutter_hbb/common/widgets/peer_tab_page.dart';
 import 'package:flutter_hbb/desktop/widgets/left_panel_peer_list.dart';
 import 'package:flutter_hbb/desktop/widgets/update_progress.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
@@ -96,11 +97,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             Column(
               children: [
                 if (!isOutgoingOnly) buildPresetPasswordWarning(),
-                Align(
-                  alignment: Alignment.center,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: loadLogo(),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: _buildDesktopLogoRow(context),
                   ),
                 ),
                 if (!isOutgoingOnly) buildIDBoard(context),
@@ -156,6 +157,38 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           ],
         ),
       ),
+    );
+  }
+
+  /// Logo del panel izquierdo: icono con bordes redondeados + logo con nombre (solo en modo claro).
+  Widget _buildDesktopLogoRow(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.asset(
+            'assets/ATSDESKiconfill1080.png',
+            fit: BoxFit.contain,
+            width: 52,
+            height: 52,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+          ),
+        ),
+        if (!isDark) ...[
+          const SizedBox(width: 10),
+          Flexible(
+            child: Image.asset(
+              'assets/ATSDeskFull.png',
+              fit: BoxFit.contain,
+              height: 58,
+              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -932,6 +965,30 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           return jsonEncode(
               await rustDeskWinManager.getOtherRemoteWindowCoords(windowId));
         }
+      } else if (call.method == kWindowEventGetGridSlotAssignments) {
+        final map = stateGlobal.gridSlotAssignments.map((slot, info) =>
+            MapEntry(slot.toString(), {'windowId': info.windowId, 'peerId': info.peerId}));
+        final payload = {'assignments': map, 'gridSize': gridMultiConnectionSize.value};
+        return jsonEncode(payload);
+      } else if (call.method == kWindowEventAssignGridSlot) {
+        final args = call.arguments is Map ? call.arguments as Map : jsonDecode(call.arguments as String) as Map;
+        final slotIndex = args['slotIndex'] as int;
+        final windowId = args['windowId'] as int;
+        final peerId = args['peerId'] as String;
+        stateGlobal.gridSlotAssignments[slotIndex] = GridSlotInfo(windowId: windowId, peerId: peerId);
+        return 'ok';
+      } else if (call.method == kWindowEventUnassignGridSlot) {
+        final slotIndex = call.arguments is int ? call.arguments : int.tryParse(call.arguments.toString());
+        if (slotIndex != null) {
+          stateGlobal.gridSlotAssignments.remove(slotIndex);
+        }
+        return 'ok';
+      } else if (call.method == kWindowEventUnassignGridSlotByWindow) {
+        final wId = call.arguments is int ? call.arguments : int.tryParse(call.arguments.toString());
+        if (wId != null) {
+          stateGlobal.gridSlotAssignments.removeWhere((_, info) => info.windowId == wId);
+        }
+        return 'ok';
       }
     });
     _uniLinksSubscription = listenUniLinks();

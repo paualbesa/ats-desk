@@ -78,6 +78,14 @@ const String kWindowEventMoveTabToNewWindow = "move_tab_to_new_window";
 const String kWindowEventGetCachedSessionData = "get_cached_session_data";
 const String kWindowEventOpenMonitorSession = "open_monitor_session";
 
+/// Minimizar a cuadrícula: main window recibe asignación y devuelve rect; remote recibe set_preview_rect y restore_from_preview.
+const String kWindowEventGetGridSlotAssignments = "get_grid_slot_assignments";
+const String kWindowEventAssignGridSlot = "assign_grid_slot";
+const String kWindowEventUnassignGridSlot = "unassign_grid_slot";
+const String kWindowEventUnassignGridSlotByWindow = "unassign_grid_slot_by_window";
+const String kWindowEventSetPreviewRect = "set_preview_rect";
+const String kWindowEventRestoreFromPreview = "restore_from_preview";
+
 const String kOptionViewStyle = "view_style";
 const String kOptionScrollStyle = "scroll_style";
 const String kOptionEdgeScrollEdgeThickness = "edge-scroll-edge-thickness";

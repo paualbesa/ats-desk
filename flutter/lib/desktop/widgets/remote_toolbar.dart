@@ -404,6 +404,9 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
       toolbarItems.add(_VoiceCallMenu(id: widget.id, ffi: widget.ffi));
     }
     if (!isWeb) toolbarItems.add(_RecordMenu());
+    if (stateGlobal.showMinimizeToGridDialogByWindow[windowId] != null) {
+      toolbarItems.add(_MinimizeToGridButton(windowId: windowId));
+    }
     toolbarItems.add(_CloseMenu(id: widget.id, ffi: widget.ffi));
     final toolbarBorderRadius = BorderRadius.all(Radius.circular(4.0));
     return Column(
@@ -2197,6 +2200,27 @@ class _RecordMenu extends StatelessWidget {
       hoverColor: recordingModel.start
           ? _ToolbarTheme.hoverRedColor
           : _ToolbarTheme.hoverBlueColor,
+    );
+  }
+}
+
+class _MinimizeToGridButton extends StatelessWidget {
+  final int windowId;
+  const _MinimizeToGridButton({Key? key, required this.windowId})
+      : super(key: key);
+
+  static String get _tooltip =>
+      localeName.startsWith('es') ? 'Minimizar a cuadrícula' : translate('Minimize to grid');
+
+  @override
+  Widget build(BuildContext context) {
+    return _IconMenuButton(
+      icon: Icon(Icons.grid_on, size: _ToolbarTheme.buttonSize - 4, color: Colors.white),
+      tooltip: _tooltip,
+      color: _ToolbarTheme.blueColor,
+      hoverColor: _ToolbarTheme.hoverBlueColor,
+      onPressed: () =>
+          stateGlobal.showMinimizeToGridDialogByWindow[windowId]?.call(),
     );
   }
 }
