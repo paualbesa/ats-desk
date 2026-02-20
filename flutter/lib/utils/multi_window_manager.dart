@@ -230,6 +230,7 @@ class RustDeskMultiWindowManager {
     bool? isRDP,
     bool? isSharedPassword,
     String? connToken,
+    bool forceOpenInTabs = false,
   }) async {
     var params = {
       "type": type.index,
@@ -252,7 +253,9 @@ class RustDeskMultiWindowManager {
     final msg = jsonEncode(params);
 
     // separate window for file transfer is not supported
-    bool openInTabs = type != WindowType.RemoteDesktop ||
+    // En vista cuadrícula se fuerza pestañas para tener todas las conexiones en una ventana
+    bool openInTabs = forceOpenInTabs ||
+        type != WindowType.RemoteDesktop ||
         mainGetLocalBoolOptionSync(kOptionOpenNewConnInTabs);
 
     if (windows.length > 1 || !openInTabs) {
@@ -273,6 +276,7 @@ class RustDeskMultiWindowManager {
     bool? isSharedPassword,
     String? switchUuid,
     bool? forceRelay,
+    bool forceOpenInTabs = false,
   }) async {
     return await newSession(
       WindowType.RemoteDesktop,
@@ -283,6 +287,7 @@ class RustDeskMultiWindowManager {
       forceRelay: forceRelay,
       switchUuid: switchUuid,
       isSharedPassword: isSharedPassword,
+      forceOpenInTabs: forceOpenInTabs,
     );
   }
 

@@ -125,15 +125,17 @@ dependency_overrides:
   flutter_plugin_android_lifecycle: 2.0.17
 
 # rerun: flutter pub run flutter_launcher_icons
+# ATS Desk: usa iconos corporativos
 flutter_icons:
-  image_path: "../res/icon.png"
+  image_path: "assets/ATSDESKicon1080.png"
   remove_alpha_ios: true
   android: true
   ios: true
   windows:
     generate: true
+    icon_path: "assets/ATSDESKicon.ico"
   macos:
-    image_path: "../res/mac-icon.png"
+    image_path: "assets/ATSDESKicon1080.png"
     generate: true
   linux: true
   web:

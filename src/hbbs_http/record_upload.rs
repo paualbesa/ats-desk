@@ -30,6 +30,11 @@ pub fn run(rx: Receiver<RecordState>) {
             Config::get_option("api-server"),
             Config::get_option("custom-rendezvous-server"),
         );
+        if api_server.is_empty() {
+            // ATS Desk: sin servidor API no subir registros a la nube
+            while let Ok(_) = rx.recv() {}
+            return;
+        }
         // This URL is used for TLS connectivity testing and fallback detection.
         let login_option_url = format!("{}/api/login-options", &api_server);
         let client = create_http_client_with_url(&login_option_url);

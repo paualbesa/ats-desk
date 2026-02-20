@@ -22,7 +22,8 @@ import '../../common.dart';
 import 'dialog.dart';
 import 'login.dart';
 
-final hideAbTagsPanel = false.obs;
+/// ATS Desk: sin tags; panel de tags oculto siempre.
+final hideAbTagsPanel = true.obs;
 
 class AddressBook extends StatefulWidget {
   final EdgeInsets? menuPadding;
@@ -46,26 +47,41 @@ class _AddressBookState extends State<AddressBook> {
         } else if (gFFI.userModel.networkError.isNotEmpty) {
           return netWorkErrorWidget();
         } else {
-          return Column(
+          return Stack(
+            clipBehavior: Clip.none,
             children: [
-              // NOT use Offstage to wrap LinearProgressIndicator
-              if (gFFI.abModel.currentAbLoading.value &&
-                  gFFI.abModel.currentAbEmpty)
-                const LinearProgressIndicator(),
-              buildErrorBanner(context,
-                  loading: gFFI.abModel.currentAbLoading,
-                  err: gFFI.abModel.currentAbPullError,
-                  retry: null,
-                  close: () => gFFI.abModel.currentAbPullError.value = ''),
-              buildErrorBanner(context,
-                  loading: gFFI.abModel.currentAbLoading,
-                  err: gFFI.abModel.currentAbPushError,
-                  retry: null, // remove retry
-                  close: () => gFFI.abModel.currentAbPushError.value = ''),
-              Expanded(
-                child: Obx(() => stateGlobal.isPortrait.isTrue
-                    ? _buildAddressBookPortrait()
-                    : _buildAddressBookLandscape()),
+              Column(
+                children: [
+                  if (gFFI.abModel.currentAbLoading.value &&
+                      gFFI.abModel.currentAbEmpty)
+                    const LinearProgressIndicator(),
+                  Expanded(
+                    child: Obx(() => stateGlobal.isPortrait.isTrue
+                        ? _buildAddressBookPortrait()
+                        : _buildAddressBookLandscape()),
+                  ),
+                ],
+              ),
+              // Banners de error flotantes arriba (no ocupan espacio en el flujo)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    buildErrorBanner(context,
+                        loading: gFFI.abModel.currentAbLoading,
+                        err: gFFI.abModel.currentAbPullError,
+                        retry: null,
+                        close: () => gFFI.abModel.currentAbPullError.value = ''),
+                    buildErrorBanner(context,
+                        loading: gFFI.abModel.currentAbLoading,
+                        err: gFFI.abModel.currentAbPushError,
+                        retry: null,
+                        close: () => gFFI.abModel.currentAbPushError.value = ''),
+                  ],
+                ),
               ),
             ],
           );

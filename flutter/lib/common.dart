@@ -251,16 +251,17 @@ class MyTheme {
   MyTheme._();
 
   static const Color grayBg = Color(0xFFEFEFF2);
-  static const Color accent = Color(0xFF0071FF);
-  static const Color accent50 = Color(0x770071FF);
-  static const Color accent80 = Color(0xAA0071FF);
+  // ATS Desk naranja corporativo
+  static const Color accent = Color(0xFFFF9800);
+  static const Color accent50 = Color(0x77FF9800);
+  static const Color accent80 = Color(0xAAFF9800);
   static const Color canvasColor = Color(0xFF212121);
   static const Color border = Color(0xFFCCCCCC);
-  static const Color idColor = Color(0xFF00B6F0);
+  static const Color idColor = Color(0xFFFFB74D);
   static const Color darkGray = Color.fromARGB(255, 148, 148, 148);
-  static const Color cmIdColor = Color(0xFF21790B);
+  static const Color cmIdColor = Color(0xFFF57C00);
   static const Color dark = Colors.black87;
-  static const Color button = Color(0xFF2C8CFF);
+  static const Color button = Color(0xFFFF9800);
   static const Color hoverBorder = Color(0xFF999999);
 
   // ListTile
@@ -432,6 +433,7 @@ class MyTheme {
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: MyTheme.accent,
+        foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8.0),
         ),
@@ -454,7 +456,7 @@ class MyTheme {
         style:
             MenuStyle(backgroundColor: MaterialStatePropertyAll(Colors.white))),
     colorScheme: ColorScheme.light(
-        primary: Colors.blue, secondary: accent, background: grayBg),
+        primary: accent, secondary: accent, background: grayBg),
     popupMenuTheme: PopupMenuThemeData(
         color: Colors.white,
         shape: RoundedRectangleBorder(
@@ -2462,7 +2464,8 @@ connectMainDesktop(String id,
     bool? forceRelay,
     String? password,
     String? connToken,
-    bool? isSharedPassword}) async {
+    bool? isSharedPassword,
+    bool forceOpenInTabs = false}) async {
   if (isFileTransfer) {
     await rustDeskWinManager.newFileTransfer(id,
         password: password,
@@ -2491,7 +2494,8 @@ connectMainDesktop(String id,
     await rustDeskWinManager.newRemoteDesktop(id,
         password: password,
         isSharedPassword: isSharedPassword,
-        forceRelay: forceRelay);
+        forceRelay: forceRelay,
+        forceOpenInTabs: forceOpenInTabs);
   }
 }
 
@@ -2509,8 +2513,16 @@ connect(BuildContext context, String id,
     bool forceRelay = false,
     String? password,
     String? connToken,
-    bool? isSharedPassword}) async {
+    bool? isSharedPassword,
+    bool forceOpenInTabs = false}) async {
   if (id == '') return;
+  final idForConnecting = id.replaceAll(' ', '');
+  if (idForConnecting.isNotEmpty) {
+    stateGlobal.connectingPeerIds.add(idForConnecting);
+    Future.delayed(const Duration(seconds: 12), () {
+      stateGlobal.connectingPeerIds.remove(idForConnecting);
+    });
+  }
   if (!isDesktop || desktopType == DesktopType.main) {
     try {
       if (Get.isRegistered<IDTextEditingController>()) {
@@ -2531,20 +2543,25 @@ connect(BuildContext context, String id,
       "more than one connect type");
 
   if (isDesktop) {
-    if (desktopType == DesktopType.main) {
-      await connectMainDesktop(
-        id,
-        isFileTransfer: isFileTransfer,
-        isViewCamera: isViewCamera,
-        isTerminal: isTerminal,
-        isTcpTunneling: isTcpTunneling,
-        isRDP: isRDP,
-        password: password,
-        isSharedPassword: isSharedPassword,
-        forceRelay: forceRelay,
-      );
-    } else {
-      await rustDeskWinManager.call(WindowType.Main, kWindowConnect, {
+    try {
+      if (desktopType == DesktopType.main) {
+        await connectMainDesktop(
+          id,
+          isFileTransfer: isFileTransfer,
+          isViewCamera: isViewCamera,
+          isTerminal: isTerminal,
+          isTcpTunneling: isTcpTunneling,
+          isRDP: isRDP,
+          password: password,
+          isSharedPassword: isSharedPassword,
+          forceRelay: forceRelay,
+          forceOpenInTabs: forceOpenInTabs,
+        );
+        if (!isFileTransfer && !isViewCamera && !isTerminal && !isTcpTunneling && !isRDP) {
+          if (!stateGlobal.connectedPeerIds.contains(id)) stateGlobal.connectedPeerIds.add(id);
+        }
+      } else {
+        await rustDeskWinManager.call(WindowType.Main, kWindowConnect, {
         'id': id,
         'isFileTransfer': isFileTransfer,
         'isViewCamera': isViewCamera,
@@ -2556,6 +2573,9 @@ connect(BuildContext context, String id,
         'forceRelay': forceRelay,
         'connToken': connToken,
       });
+      }
+    } finally {
+      stateGlobal.connectingPeerIds.remove(idForConnecting);
     }
   } else {
     if (isFileTransfer) {
@@ -3652,11 +3672,11 @@ Widget loadPowered(BuildContext context) {
 // max 300 x 60
 Widget loadLogo() {
   return FutureBuilder<ByteData>(
-      future: rootBundle.load('assets/logo.png'),
+      future: rootBundle.load('assets/ATSDESKiconfill1080.png'),
       builder: (BuildContext context, AsyncSnapshot<ByteData> snapshot) {
         if (snapshot.hasData) {
           final image = Image.asset(
-            'assets/logo.png',
+            'assets/ATSDESKiconfill1080.png',
             fit: BoxFit.contain,
             errorBuilder: (ctx, error, stackTrace) {
               return Container();
@@ -3672,11 +3692,11 @@ Widget loadLogo() {
 }
 
 Widget loadIcon(double size) {
-  return Image.asset('assets/icon.png',
+  return Image.asset('assets/ATSDESKicon256.png',
       width: size,
       height: size,
       errorBuilder: (ctx, error, stackTrace) => SvgPicture.asset(
-            'assets/icon.svg',
+            'assets/ATSDESKicon256.svg',
             width: size,
             height: size,
           ));
@@ -3705,26 +3725,20 @@ Widget _buildPresetPasswordWarning() {
     return SizedBox.shrink();
   }
   return Container(
-    color: Colors.yellow,
-    child: Column(
+    color: Colors.orange.withOpacity(0.1),
+    child: Row(
       children: [
-        Align(
-            child: Text(
-          translate("Security Alert"),
-          style: TextStyle(
-            color: Colors.red,
-            fontSize:
-                18, // https://github.com/rustdesk/rustdesk-server-pro/issues/261
-            fontWeight: FontWeight.bold,
+        Icon(Icons.info_outline, color: Colors.orange, size: 18),
+        SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            translate("preset_password_warning"),
+            style: TextStyle(color: Colors.orange.shade800, fontSize: 12),
           ),
-        )).paddingOnly(bottom: 8),
-        Text(
-          translate("preset_password_warning"),
-          style: TextStyle(color: Colors.red),
-        )
+        ),
       ],
     ).paddingAll(8),
-  ); // Show a warning message if the Future completed with true
+  );
 }
 
 Widget buildPresetPasswordWarningMobile() {

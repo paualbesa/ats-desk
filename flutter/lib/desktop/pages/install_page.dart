@@ -165,7 +165,7 @@ class _InstallPageBodyState extends State<_InstallPageBody>
                   .marginOnly(bottom: 7),
               Option(desktopicon, label: 'Create desktop icon')
                   .marginOnly(bottom: 7),
-              Option(printer, label: 'Install {$appName} Printer'),
+              Option(printer, label: translate('Install {} Printer').replaceAll('{}', appName)),
               Container(
                   padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -184,23 +184,24 @@ class _InstallPageBodyState extends State<_InstallPageBody>
                         children: [
                           Text(translate('agreement_tip'))
                               .marginOnly(bottom: em),
-                          InkWell(
-                            hoverColor: Colors.transparent,
-                            onTap: () => launchUrlString(
-                                'https://rustdesk.com/privacy.html'),
-                            child: Tooltip(
-                              message: 'https://rustdesk.com/privacy.html',
-                              child: Row(children: [
-                                Icon(Icons.launch_outlined, size: 16)
-                                    .marginOnly(right: 5),
-                                Text(
-                                  translate('End-user license agreement'),
-                                  style: const TextStyle(
-                                      decoration: TextDecoration.underline),
-                                )
-                              ]),
-                            ),
-                          ),
+                          // TODO: Actualizar cuando ATS Desk tenga su propia página de privacidad
+                          // InkWell(
+                          //   hoverColor: Colors.transparent,
+                          //   onTap: () => launchUrlString(
+                          //       'https://atsdesk.com/privacy.html'),
+                          //   child: Tooltip(
+                          //     message: 'https://atsdesk.com/privacy.html',
+                          //     child: Row(children: [
+                          //       Icon(Icons.launch_outlined, size: 16)
+                          //           .marginOnly(right: 5),
+                          //       Text(
+                          //         translate('End-user license agreement'),
+                          //         style: const TextStyle(
+                          //             decoration: TextDecoration.underline),
+                          //       )
+                          //     ]),
+                          //   ),
+                          // ),
                         ],
                       )
                     ],

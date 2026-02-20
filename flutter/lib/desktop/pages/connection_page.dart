@@ -2,24 +2,21 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common/widgets/connection_page_title.dart';
 import 'package:flutter_hbb/consts.dart';
-import 'package:flutter_hbb/desktop/widgets/popup_menu.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:get/get.dart';
-import 'package:url_launcher/url_launcher_string.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:flutter_hbb/models/peer_model.dart';
 
 import '../../common.dart';
 import '../../common/formatter/id_formatter.dart';
 import '../../common/widgets/peer_tab_page.dart';
+import '../../common/widgets/peer_card.dart';
 import '../../common/widgets/autocomplete.dart';
 import '../../models/platform_model.dart';
-import '../../desktop/widgets/material_mod_popup_menu.dart' as mod_menu;
 
 class OnlineStatusWidget extends StatefulWidget {
   const OnlineStatusWidget({Key? key, this.onSvcStatusChanged})
@@ -34,20 +31,11 @@ class OnlineStatusWidget extends StatefulWidget {
 /// State for the connection page.
 class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
   final _svcStopped = Get.find<RxBool>(tag: 'stop-service');
-  final _svcIsUsingPublicServer = true.obs;
   Timer? _updateTimer;
 
   double get em => 14.0;
   double? get height => bind.isIncomingOnly() ? null : em * 3;
 
-  void onUsePublicServerGuide() {
-    const url = "https://rustdesk.com/pricing";
-    canLaunchUrlString(url).then((can) {
-      if (can) {
-        launchUrlString(url);
-      }
-    });
-  }
 
   @override
   void initState() {
@@ -78,36 +66,7 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
               .marginOnly(left: em),
         );
 
-    setupServerWidget() => Flexible(
-          child: Offstage(
-            offstage: !(!_svcStopped.value &&
-                stateGlobal.svcStatus.value == SvcStatus.ready &&
-                _svcIsUsingPublicServer.value),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(', ', style: TextStyle(fontSize: em)),
-                Flexible(
-                  child: InkWell(
-                    onTap: onUsePublicServerGuide,
-                    child: Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            translate('setup_server_tip'),
-                            style: TextStyle(
-                                decoration: TextDecoration.underline,
-                                fontSize: em),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              ],
-            ),
-          ),
-        );
+    setupServerWidget() => Container();
 
     basicWidget() => Row(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -157,12 +116,12 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
     widget.onSvcStatusChanged?.call();
     return Text(
       _svcStopped.value
-          ? translate("Service is not running")
+          ? translate("Desconectado de ATS")
           : stateGlobal.svcStatus.value == SvcStatus.connecting
-              ? translate("connecting_status")
+              ? translate("Conectando a ATS...")
               : stateGlobal.svcStatus.value == SvcStatus.notReady
-                  ? translate("not_ready_status")
-                  : translate('Ready'),
+                  ? translate("Desconectado de ATS")
+                  : translate('Conectado a ATS'),
       style: TextStyle(fontSize: em),
     );
   }
@@ -180,10 +139,60 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
     } else {
       stateGlobal.svcStatus.value = SvcStatus.notReady;
     }
-    _svcIsUsingPublicServer.value = await bind.mainIsUsingPublicServer();
     try {
       stateGlobal.videoConnCount.value = status['video_conn_count'] as int;
     } catch (_) {}
+  }
+}
+
+/// Animated connect button with smooth hover and press effects
+class _AnimatedConnectButton extends StatefulWidget {
+  final VoidCallback onPressed;
+  final String label;
+  
+  const _AnimatedConnectButton({
+    required this.onPressed,
+    required this.label,
+  });
+
+  @override
+  State<_AnimatedConnectButton> createState() => _AnimatedConnectButtonState();
+}
+
+class _AnimatedConnectButtonState extends State<_AnimatedConnectButton> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) {
+          setState(() => _pressed = false);
+          widget.onPressed();
+        },
+        onTapCancel: () => setState(() => _pressed = false),
+        child: AnimatedScale(
+          scale: _pressed ? 0.95 : (_hovered ? 1.05 : 1.0),
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeOut,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            child: ElevatedButton(
+              onPressed: widget.onPressed,
+              style: ElevatedButton.styleFrom(
+                elevation: _hovered ? 4 : 2,
+              ),
+              child: Text(widget.label),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -205,16 +214,12 @@ class _ConnectionPageState extends State<ConnectionPage>
   final FocusNode _idFocusNode = FocusNode();
   final TextEditingController _idEditingController = TextEditingController();
 
-  String selectedConnectionType = 'Connect';
-
   bool isWindowMinimized = false;
 
   final AllPeersLoader _allPeersLoader = AllPeersLoader();
 
   // https://github.com/flutter/flutter/issues/157244
   Iterable<Peer> _autocompleteOpts = [];
-
-  final _menuOpen = false.obs;
 
   @override
   void initState() {
@@ -303,25 +308,105 @@ class _ConnectionPageState extends State<ConnectionPage>
 
   @override
   Widget build(BuildContext context) {
-    final isOutgoingOnly = bind.isOutgoingOnly();
-    return Column(
+    return Stack(
       children: [
-        Expanded(
-            child: Column(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Flexible(child: _buildRemoteIDTextField(context)),
-              ],
-            ).marginOnly(top: 22),
-            SizedBox(height: 12),
-            Divider().paddingOnly(right: 12),
-            Expanded(child: PeerTabPage()),
+            // Barra de vista: 1, 2, 4, 9, 16 pantallas y botón fullscreen
+            Obx(() {
+              if (peerCardUiType.value != PeerUiType.grid) return const SizedBox.shrink();
+              return _buildGridToolbar(context);
+            }),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 12.0),
+                child: PeerTabPage(),
+              ),
+            ),
           ],
-        ).paddingOnly(left: 12.0)),
-        if (!isOutgoingOnly) const Divider(height: 1),
-        if (!isOutgoingOnly) OnlineStatusWidget()
+        ),
+        // Botón fullscreen flotante: entrar/salir (siempre visible en modo grid)
+        Obx(() {
+          if (peerCardUiType.value != PeerUiType.grid) return const SizedBox.shrink();
+          final isFullscreen = stateGlobal.fullscreen.isTrue;
+          return Positioned(
+            top: 16,
+            right: 16,
+            child: Material(
+              elevation: 6,
+              borderRadius: BorderRadius.circular(8),
+              color: Colors.grey.shade400,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => stateGlobal.setFullscreen(!isFullscreen, procWnd: false),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  child: Icon(
+                    isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
       ],
+    );
+  }
+
+  Widget _buildGridToolbar(BuildContext context) {
+    const sizes = [1, 2, 4, 9, 16];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+      child: Row(
+        children: [
+          Text(
+            (localeName.startsWith('es') ? 'Vista' : translate('View')),
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: Theme.of(context).hintColor,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          const SizedBox(width: 10),
+          ...sizes.map((size) {
+            return Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: Obx(() {
+                final selected = gridMultiConnectionSize.value == size;
+                return Material(
+                  color: selected
+                      ? Theme.of(context).colorScheme.primaryContainer
+                      : Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(8),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () async {
+                      gridMultiConnectionSize.value = size;
+                      await bind.setLocalFlutterOption(
+                        k: 'grid_multi_connection_size',
+                        v: size.toString(),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      child: Text(
+                        '$size',
+                        style: TextStyle(
+                          fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            );
+          }),
+          const Spacer(),
+        ],
+      ),
     );
   }
 
@@ -429,7 +514,7 @@ class _ConnectionPageState extends State<ConnectionPage>
                               counterText: '',
                               hintText: _idInputFocused.value
                                   ? null
-                                  : translate('Enter Remote ID'),
+                                  : translate('ID'),
                               contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 15, vertical: 13)),
                           controller: fieldTextEditingController,
@@ -517,90 +602,11 @@ class _ConnectionPageState extends State<ConnectionPage>
               child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
                 SizedBox(
                   height: 28.0,
-                  child: ElevatedButton(
+                  child: _AnimatedConnectButton(
                     onPressed: () {
                       onConnect();
                     },
-                    child: Text(translate("Connect")),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  height: 28.0,
-                  width: 28.0,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Theme.of(context).dividerColor),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Center(
-                    child: StatefulBuilder(
-                      builder: (context, setState) {
-                        var offset = Offset(0, 0);
-                        return Obx(() => InkWell(
-                              child: _menuOpen.value
-                                  ? Transform.rotate(
-                                      angle: pi,
-                                      child: Icon(IconFont.more, size: 14),
-                                    )
-                                  : Icon(IconFont.more, size: 14),
-                              onTapDown: (e) {
-                                offset = e.globalPosition;
-                              },
-                              onTap: () async {
-                                _menuOpen.value = true;
-                                final x = offset.dx;
-                                final y = offset.dy;
-                                await mod_menu
-                                    .showMenu(
-                                  context: context,
-                                  position: RelativeRect.fromLTRB(x, y, x, y),
-                                  items: [
-                                    (
-                                      'Transfer file',
-                                      () => onConnect(isFileTransfer: true)
-                                    ),
-                                    (
-                                      'View camera',
-                                      () => onConnect(isViewCamera: true)
-                                    ),
-                                    (
-                                      '${translate('Terminal')} (beta)',
-                                      () => onConnect(isTerminal: true)
-                                    ),
-                                  ]
-                                      .map((e) => MenuEntryButton<String>(
-                                            childBuilder: (TextStyle? style) =>
-                                                Text(
-                                              translate(e.$1),
-                                              style: style,
-                                            ),
-                                            proc: () => e.$2(),
-                                            padding: EdgeInsets.symmetric(
-                                                horizontal:
-                                                    kDesktopMenuPadding.left),
-                                            dismissOnClicked: true,
-                                          ))
-                                      .map((e) => e.build(
-                                          context,
-                                          const MenuConfig(
-                                              commonColor: CustomPopupMenuTheme
-                                                  .commonColor,
-                                              height:
-                                                  CustomPopupMenuTheme.height,
-                                              dividerHeight:
-                                                  CustomPopupMenuTheme
-                                                      .dividerHeight)))
-                                      .expand((i) => i)
-                                      .toList(),
-                                  elevation: 8,
-                                )
-                                    .then((_) {
-                                  _menuOpen.value = false;
-                                });
-                              },
-                            ));
-                      },
-                    ),
+                    label: translate("Connect"),
                   ),
                 ),
               ]),

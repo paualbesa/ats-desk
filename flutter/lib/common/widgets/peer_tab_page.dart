@@ -84,8 +84,8 @@ class _PeerTabPageState extends State<PeerTabPage>
               ? PeerUiType.tile
               : PeerUiType.list;
     }
-    hideAbTagsPanel.value =
-        bind.mainGetLocalOption(key: kOptionHideAbTagsPanel) == 'Y';
+    // ATS Desk: sin tags; no mostrar panel de tags
+    hideAbTagsPanel.value = true;
   }
 
   Future<void> handleTabSelection(int tabIndex) async {
@@ -109,26 +109,8 @@ class _PeerTabPageState extends State<PeerTabPage>
       textBaseline: TextBaseline.ideographic,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Obx(() => SizedBox(
-              height: 32,
-              child: Container(
-                padding: stateGlobal.isPortrait.isTrue
-                    ? EdgeInsets.symmetric(horizontal: 2)
-                    : null,
-                child: selectionWrap(Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                        child: visibleContextMenuListener(
-                            _createSwitchBar(context))),
-                    if (stateGlobal.isPortrait.isTrue)
-                      ..._portraitRightActions(context)
-                    else
-                      ..._landscapeRightActions(context)
-                  ],
-                )),
-              ),
-            ).paddingOnly(right: stateGlobal.isPortrait.isTrue ? 0 : 12)),
+        // Barra de pestañas oculta: la lista está en el panel izquierdo; centro limpio
+        const SizedBox.shrink(),
         _createPeersView(),
       ],
     );
@@ -259,6 +241,61 @@ class _PeerTabPageState extends State<PeerTabPage>
     );
   }
 
+  Widget connectSelection() {
+    final model = Provider.of<PeerTabModel>(context, listen: false);
+    final hover = false.obs;
+    return Obx(
+      () => AnimatedScale(
+        scale: hover.value ? 1.15 : 1.0,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+        child: Tooltip(
+          message: translate('Connect'),
+          child: InkWell(
+            onHover: (value) => hover.value = value,
+            onTap: () async {
+              if (model.selectedPeers.isEmpty) return;
+              final maxConnections = gridMultiConnectionSize.value;
+              final selectedCount = model.selectedPeers.length;
+              
+              if (selectedCount > maxConnections) {
+                final selectedText = translate('Selected');
+                showToast(
+                  '$selectedText: $maxConnections/$selectedCount',
+                );
+              }
+              
+              final peers = model.selectedPeers.take(maxConnections).toList();
+              // Conectar con un pequeño delay entre cada conexión para evitar sobrecarga
+              for (int i = 0; i < peers.length; i++) {
+                connect(context, peers[i].id);
+                if (i < peers.length - 1) {
+                  await Future.delayed(const Duration(milliseconds: 200));
+                }
+              }
+              // Activar pantalla completa después de un breve delay para que las ventanas se abran
+              Future.delayed(const Duration(milliseconds: 500), () {
+                stateGlobal.setFullscreen(true, procWnd: false);
+              });
+              model.setMultiSelectionMode(false);
+            },
+            child: Container(
+              padding: const EdgeInsets.all(4.0),
+              child: AnimatedOpacity(
+                opacity: hover.value ? 1.0 : 0.8,
+                duration: const Duration(milliseconds: 200),
+                child: Icon(
+                  Icons.play_arrow_rounded,
+                  color: hover.value ? MyTheme.accent : null,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void mobileShowTabVisibilityMenu() {
     final model = gFFI.peerTabModel;
     final items = List<PopupMenuItem>.empty(growable: true);
@@ -357,28 +394,34 @@ class _PeerTabPageState extends State<PeerTabPage>
   }
 
   Widget createMultiSelectionBar(PeerTabModel model) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Offstage(
-          offstage: model.selectedPeers.isEmpty,
-          child: Row(
-            children: [
-              deleteSelection(),
-              addSelectionToFav(),
-              addSelectionToAb(),
-              editSelectionTags(),
-            ],
+    return AnimatedOpacity(
+      opacity: model.selectedPeers.isEmpty ? 0.0 : 1.0,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Offstage(
+            offstage: model.selectedPeers.isEmpty,
+            child: Row(
+              children: [
+                connectSelection(),
+                deleteSelection(),
+                addSelectionToFav(),
+                addSelectionToAb(),
+                editSelectionTags(),
+              ],
+            ),
           ),
-        ),
-        Row(
-          children: [
-            selectionCount(model.selectedPeers.length),
-            selectAll(model),
-            closeSelection(),
-          ],
-        )
-      ],
+          Row(
+            children: [
+              selectionCount(model.selectedPeers.length),
+              selectAll(model),
+              closeSelection(),
+            ],
+          )
+        ],
+      ),
     );
   }
 
@@ -499,9 +542,22 @@ class _PeerTabPageState extends State<PeerTabPage>
   }
 
   Widget selectionCount(int count) {
-    return Align(
-      alignment: Alignment.center,
-      child: Text('$count ${translate('Selected')}'),
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(
+            scale: animation,
+            child: child,
+          ),
+        );
+      },
+      child: Align(
+        key: ValueKey<int>(count),
+        alignment: Alignment.center,
+        child: Text('$count ${translate('Selected')}'),
+      ),
     );
   }
 
@@ -566,11 +622,46 @@ class _PeerTabPageState extends State<PeerTabPage>
         offstage: model.currentTab == PeerTabIndex.recent.index,
         child: PeerSortDropdown(),
       ),
-      Offstage(
-        offstage: model.currentTab != PeerTabIndex.ab.index,
-        child: _toggleTags(),
-      ),
+      // ATS Desk: sin tags; panel y botón de tags quitados
+      Obx(() => Offstage(
+        offstage: peerCardUiType.value != PeerUiType.grid,
+        child: _createFullscreenButton(context),
+      )),
     ];
+  }
+
+  Widget _createFullscreenButton(BuildContext context) {
+    return _hoverAction(
+        context: context,
+        toolTip: stateGlobal.fullscreen.isTrue 
+            ? 'Salir de pantalla completa' 
+            : 'Pantalla completa',
+        child: Obx(() => AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          transitionBuilder: (Widget child, Animation<double> animation) {
+            return RotationTransition(
+              turns: animation,
+              child: FadeTransition(
+                opacity: animation,
+                child: child,
+              ),
+            );
+          },
+          child: Icon(
+            stateGlobal.fullscreen.isTrue
+                ? Icons.fullscreen_exit
+                : Icons.fullscreen,
+            key: ValueKey<bool>(stateGlobal.fullscreen.isTrue),
+            size: 18,
+          ),
+        )),
+        onTap: () async {
+          if (stateGlobal.fullscreen.isTrue) {
+            stateGlobal.setFullscreen(false, procWnd: false);
+          } else {
+            stateGlobal.setFullscreen(true, procWnd: false);
+          }
+        });
   }
 
   List<Widget> _portraitRightActions(BuildContext context) {
@@ -630,7 +721,8 @@ class _PeerTabPageState extends State<PeerTabPage>
     final List<Widget> dynamicActions = [
       if (model.currentTabCachedPeers.isNotEmpty) _createMultiSelection(),
       if (model.currentTab != PeerTabIndex.recent.index) PeerSortDropdown(),
-      if (model.currentTab == PeerTabIndex.ab.index) _toggleTags()
+      // ATS Desk: sin tags; botón de tags quitado
+      // if (model.currentTab == PeerTabIndex.ab.index) _toggleTags()
     ];
     final rightWidth = availableWidth -
         searchWidth -
@@ -773,7 +865,23 @@ class PeerViewDropdown extends StatefulWidget {
   State<PeerViewDropdown> createState() => _PeerViewDropdownState();
 }
 
+// Variable global para el tamaño de grid de múltiples conexiones (1, 2, 4, 9, 16)
+final gridMultiConnectionSize = 4.obs;
+
 class _PeerViewDropdownState extends State<PeerViewDropdown> {
+  @override
+  void initState() {
+    super.initState();
+    // Cargar tamaño de grid guardado
+    final savedSize = bind.getLocalFlutterOption(k: 'grid_multi_connection_size');
+    if (savedSize.isNotEmpty) {
+      final size = int.tryParse(savedSize);
+      if (size != null && [1, 2, 4, 9, 16].contains(size)) {
+        gridMultiConnectionSize.value = size;
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<PeerUiType> types = [
@@ -831,6 +939,63 @@ class _PeerViewDropdownState extends State<PeerViewDropdown> {
                             }),
                 ),
               ))));
+    }
+
+    // Agregar opciones de múltiples conexiones cuando está en modo grid
+    if (peerCardUiType.value == PeerUiType.grid) {
+      items.add(const PopupMenuDivider());
+      items.add(PopupMenuItem(
+          height: 36,
+          enabled: false,
+          child: Text('Conexiones simultáneas', style: style)));
+      
+      final gridSizes = [1, 2, 4, 9, 16];
+      for (var size in gridSizes) {
+        items.add(PopupMenuItem(
+            height: 36,
+            child: Obx(() => Center(
+                  child: SizedBox(
+                    height: 36,
+                    child: getRadio<int>(
+                        Tooltip(
+                            message: size == 1 ? '1 pantalla' : '$size pantallas',
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  size == 1
+                                      ? Icons.crop_square
+                                      : size == 2
+                                          ? Icons.view_column
+                                          : size == 4
+                                              ? Icons.grid_view
+                                              : size == 9
+                                                  ? Icons.view_module
+                                                  : Icons.dashboard,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(size == 1 ? '1' : '$size'),
+                              ],
+                            )),
+                        size,
+                        gridMultiConnectionSize.value,
+                        dense: true,
+                        (int? v) async {
+                          if (v != null) {
+                            gridMultiConnectionSize.value = v;
+                            await bind.setLocalFlutterOption(
+                              k: 'grid_multi_connection_size',
+                              v: v.toString(),
+                            );
+                            if (Navigator.canPop(context)) {
+                              Navigator.pop(context);
+                            }
+                          }
+                        }),
+                  ),
+                ))));
+      }
     }
 
     var menuPos = RelativeRect.fromLTRB(0, 0, 0, 0);
@@ -1014,15 +1179,18 @@ Widget _hoverAction(
   return Tooltip(
     message: toolTip,
     child: Obx(
-      () => Container(
-          margin: EdgeInsets.symmetric(horizontal: 1),
-          decoration:
-              (hover.value || hoverableWhenfalse?.value == false) ? deco : null,
-          child: InkWell(
-              onHover: (value) => hover.value = value,
-              onTap: onTap,
-              onTapDown: onTapDown,
-              child: Container(padding: padding, child: child))),
+      () => AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        margin: EdgeInsets.symmetric(horizontal: 1),
+        decoration:
+            (hover.value || hoverableWhenfalse?.value == false) ? deco : null,
+        child: InkWell(
+            onHover: (value) => hover.value = value,
+            onTap: onTap,
+            onTapDown: onTapDown,
+            child: Container(padding: padding, child: child)),
+      ),
     ),
   );
 }

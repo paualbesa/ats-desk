@@ -143,6 +143,9 @@ impl OidcSession {
     }
 
     fn ensure_client(api_server: &str) {
+        if api_server.is_empty() {
+            return;
+        }
         let mut write_guard = OIDC_SESSION.write().unwrap();
         if write_guard.client.is_none() {
             // This URL is used to detect the appropriate TLS implementation for the server.

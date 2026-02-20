@@ -2157,7 +2157,7 @@ class __PrinterState extends State<_Printer> {
       return Align(
         alignment: Alignment.topLeft,
         child:
-            Text(translate('printer-requires-installed-{$appName}-client-tip')),
+            Text(translate('printer-requires-installed-{}-client-tip').replaceAll('{}', appName)),
       ).marginOnly(left: _kCardLeftMargin);
     }
 
@@ -2177,7 +2177,7 @@ class __PrinterState extends State<_Printer> {
               ? Offstage()
               : Align(
                   alignment: Alignment.topLeft,
-                  child: Text(translate('printer-{$appName}-not-installed-tip'))
+                  child: Text(translate('printer-{}-not-installed-tip').replaceAll('{}', appName))
                       .marginOnly(bottom: 10.0),
                 ),
         ),
@@ -2192,7 +2192,7 @@ class __PrinterState extends State<_Printer> {
                               .copyWith(color: Colors.red))
                       .marginOnly(bottom: 10.0)),
         ),
-        _Button('Install {$appName} Printer', () {
+        _Button(translate('Install {} Printer').replaceAll('{}', appName), () {
           failedMsg.value = '';
           bind.mainSetCommon(key: 'install-printer', value: '');
         })
@@ -2202,7 +2202,7 @@ class __PrinterState extends State<_Printer> {
     Widget tipReady() {
       return Align(
         alignment: Alignment.topLeft,
-        child: Text(translate('printer-{$appName}-ready-tip')),
+        child: Text(translate('printer-{}-ready-tip').replaceAll('{}', appName)),
       ).marginOnly(left: _kCardLeftMargin);
     }
 
@@ -2302,7 +2302,7 @@ class _AboutState extends State<_About> {
       final scrollController = ScrollController();
       return SingleChildScrollView(
         controller: scrollController,
-        child: _Card(title: translate('About RustDesk'), children: [
+        child: _Card(title: translate('About ATS Desk'), children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -2319,22 +2319,24 @@ class _AboutState extends State<_About> {
                 SelectionArea(
                     child: Text('${translate('Fingerprint')}: $fingerprint')
                         .marginSymmetric(vertical: 4.0)),
-              InkWell(
-                  onTap: () {
-                    launchUrlString('https://rustdesk.com/privacy.html');
-                  },
-                  child: Text(
-                    translate('Privacy Statement'),
-                    style: linkStyle,
-                  ).marginSymmetric(vertical: 4.0)),
-              InkWell(
-                  onTap: () {
-                    launchUrlString('https://rustdesk.com');
-                  },
-                  child: Text(
-                    translate('Website'),
-                    style: linkStyle,
-                  ).marginSymmetric(vertical: 4.0)),
+              // TODO: Actualizar cuando ATS Desk tenga su propia página de privacidad
+              // InkWell(
+              //     onTap: () {
+              //       launchUrlString('https://atsdesk.com/privacy.html');
+              //     },
+              //     child: Text(
+              //       translate('Privacy Statement'),
+              //       style: linkStyle,
+              //     ).marginSymmetric(vertical: 4.0)),
+              // TODO: Actualizar cuando ATS Desk tenga su propio sitio web
+              // InkWell(
+              //     onTap: () {
+              //       launchUrlString('https://atsdesk.com');
+              //     },
+              //     child: Text(
+              //       translate('Website'),
+              //       style: linkStyle,
+              //     ).marginSymmetric(vertical: 4.0)),
               Container(
                 decoration: const BoxDecoration(color: Color(0xFF2c8cff)),
                 padding:

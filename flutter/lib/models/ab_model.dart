@@ -124,6 +124,8 @@ class AbModel {
     if (bind.isDisableAb()) return;
     if (!gFFI.userModel.isLogin) return;
     if (gFFI.userModel.networkError.isNotEmpty) return;
+    final url = (await bind.mainGetApiServer()).trim();
+    if (url.isEmpty || url.contains('rustdesk.com')) return;
     if (force == null && listInitialized && current.initialized) return;
     debugPrint("pullAb, force: $force, quiet: $quiet");
     if (!listInitialized || force == ForcePullAb.listAndCurrent) {

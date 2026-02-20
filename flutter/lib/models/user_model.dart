@@ -14,6 +14,10 @@ import 'platform_model.dart';
 
 bool refreshingUser = false;
 
+/// ATS Desk: no usar nunca el servidor público de RustDesk (evita peticiones aunque Rust devuelva esa URL).
+bool _isPublicRustDeskApi(String url) =>
+    url.trim().isNotEmpty && url.contains('rustdesk.com');
+
 class UserModel {
   final RxString userName = ''.obs;
   final RxBool isAdmin = false.obs;
@@ -40,7 +44,11 @@ class UserModel {
       return;
     }
     _updateLocalUserInfo();
-    final url = await bind.mainGetApiServer();
+    final url = (await bind.mainGetApiServer()).trim();
+    if (url.isEmpty || _isPublicRustDeskApi(url)) {
+      await updateOtherModels();
+      return;
+    }
     final body = {
       'id': await bind.mainGetMyId(),
       'uuid': await bind.mainGetUuid()
@@ -133,7 +141,12 @@ class UserModel {
   Future<void> logOut({String? apiServer}) async {
     final tag = gFFI.dialogManager.showLoading(translate('Waiting'));
     try {
-      final url = apiServer ?? await bind.mainGetApiServer();
+      final url = (apiServer ?? await bind.mainGetApiServer()).trim();
+      if (url.isEmpty || _isPublicRustDeskApi(url)) {
+        await reset(resetOther: true);
+        gFFI.dialogManager.dismissByTag(tag);
+        return;
+      }
       final authHeaders = getHttpHeaders();
       authHeaders['Content-Type'] = "application/json";
       await http
@@ -154,7 +167,11 @@ class UserModel {
 
   /// throw [RequestException]
   Future<LoginResponse> login(LoginRequest loginRequest) async {
-    final url = await bind.mainGetApiServer();
+    final url = (await bind.mainGetApiServer()).trim();
+    if (url.isEmpty || _isPublicRustDeskApi(url)) {
+      throw RequestException(
+          0, 'No API server configured. Use local login (ATS Desk).');
+    }
     final resp = await http.post(Uri.parse('$url/api/login'),
         body: jsonEncode(loginRequest.toJson()));
 
@@ -199,8 +216,8 @@ class UserModel {
 
   static Future<List<dynamic>> queryOidcLoginOptions() async {
     try {
-      final url = await bind.mainGetApiServer();
-      if (url.trim().isEmpty) return [];
+      final url = (await bind.mainGetApiServer()).trim();
+      if (url.isEmpty || _isPublicRustDeskApi(url)) return [];
       final resp = await http.get(Uri.parse('$url/api/login-options'));
       final List<String> ops = [];
       for (final item in jsonDecode(resp.body)) {

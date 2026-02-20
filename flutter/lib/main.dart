@@ -172,6 +172,8 @@ void runMainApp(bool startService) async {
     }
     windowManager.setOpacity(1);
     windowManager.setTitle(getWindowName());
+    // Iniciar siempre maximizada
+    windowManager.maximize();
     // Do not use `windowManager.setResizable()` here.
     setResizable(!bind.isIncomingOnly());
   });
@@ -365,9 +367,20 @@ void _runApp(
       navigatorKey: globalKey,
       debugShowCheckedModeBanner: false,
       title: title,
-      theme: MyTheme.lightTheme,
-      darkTheme: MyTheme.darkTheme,
-      themeMode: themeMode,
+      theme: MyTheme.lightTheme.copyWith(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFFFF9800),
+          brightness: Brightness.light,
+        ),
+      ),
+      darkTheme: MyTheme.darkTheme.copyWith(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFFFF9800),
+          brightness: Brightness.dark,
+        ),
+      ),
+      themeMode: MyTheme.currentThemeMode(),
+
       home: home,
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
@@ -391,7 +404,7 @@ void _runApp(
 void runInstallPage() async {
   await windowManager.ensureInitialized();
   await initEnv(kAppTypeMain);
-  _runApp('', const InstallPage(), MyTheme.currentThemeMode());
+  _runApp('${bind.mainGetAppNameSync()} - ${translate('Installation')}', const InstallPage(), MyTheme.currentThemeMode());
   WindowOptions windowOptions =
       getHiddenTitleBarWindowOptions(size: Size(800, 600), center: true);
   windowManager.waitUntilReadyToShow(windowOptions, () async {
@@ -502,9 +515,20 @@ class _AppState extends State<App> with WidgetsBindingObserver {
           title: isWeb
               ? '${bind.mainGetAppNameSync()} Web Client V2 (Preview)'
               : bind.mainGetAppNameSync(),
-          theme: MyTheme.lightTheme,
-          darkTheme: MyTheme.darkTheme,
+          theme: MyTheme.lightTheme.copyWith(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFFFF9800),
+              brightness: Brightness.light,
+            ),
+          ),
+          darkTheme: MyTheme.darkTheme.copyWith(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFFFF9800),
+              brightness: Brightness.dark,
+            ),
+          ),
           themeMode: MyTheme.currentThemeMode(),
+
           home: isDesktop
               ? const DesktopTabPage()
               : isWeb

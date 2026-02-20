@@ -40,6 +40,7 @@ class GroupModel {
     if (bind.isDisableGroupPanel()) return;
     if (!gFFI.userModel.isLogin || groupLoading.value) return;
     if (gFFI.userModel.networkError.isNotEmpty) return;
+    if ((await bind.mainGetApiServer()).trim().isEmpty) return;
     if (!force && initialized) return;
     if (!quiet) {
       groupLoading.value = true;

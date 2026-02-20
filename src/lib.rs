@@ -77,4 +77,5 @@ pub mod virtual_display_manager;
 
 mod kcp_stream;
 
+#[cfg(any(target_os = "android", target_os = "ios", feature = "flutter"))]
 pub mod api;

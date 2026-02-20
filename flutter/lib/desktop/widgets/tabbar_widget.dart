@@ -25,6 +25,9 @@ const double _kTabBarHeight = kDesktopRemoteTabBarHeight;
 const double _kIconSize = 18;
 const double _kDividerIndent = 10;
 const double _kActionIconSize = 12;
+// Botones de ventana (minimizar, maximizar, cerrar) más grandes tipo Cursor
+const double _kWindowActionIconSize = 16;
+const double _kWindowActionBoxSize = 46;
 
 class TabInfo {
   final String key; // Notice: cm use client_id.toString() as key
@@ -635,17 +638,22 @@ class _DesktopTabState extends State<DesktopTab>
                       child: Row(children: [
                         Offstage(
                           offstage: !showLogo,
-                          child: loadIcon(16),
+                          child: loadIcon(24),
                         ),
                         Offstage(
                             offstage: !showTitle,
-                            child: const Text(
-                              "RustDesk",
-                              style: TextStyle(fontSize: 13),
-                            ).marginOnly(left: 2))
+                            child: Text(
+                              bind.mainGetAppNameSync().isNotEmpty
+                                  ? bind.mainGetAppNameSync()
+                                  : 'ATS Desk',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ).marginOnly(left: 8))
                       ]).marginOnly(
-                        left: 5,
-                        right: 10,
+                        left: 8,
+                        right: 12,
                       ),
                     ),
                     Expanded(
@@ -772,6 +780,8 @@ class WindowActionPanelState extends State<WindowActionPanel> {
                 ActionIcon(
                   message: 'Minimize',
                   icon: IconFont.min,
+                  iconSize: _kWindowActionIconSize,
+                  boxSize: _kWindowActionBoxSize,
                   onTap: () {
                     if (widget.isMainWindow) {
                       windowManager.minimize();
@@ -789,6 +799,8 @@ class WindowActionPanelState extends State<WindowActionPanel> {
                       icon: stateGlobal.isMaximized.isTrue
                           ? IconFont.restore
                           : IconFont.max,
+                      iconSize: _kWindowActionIconSize,
+                      boxSize: _kWindowActionBoxSize,
                       onTap: bind.isIncomingOnly() && isInHomePage()
                           ? null
                           : _toggleMaximize,
@@ -798,6 +810,8 @@ class WindowActionPanelState extends State<WindowActionPanel> {
                 ActionIcon(
                   message: 'Close',
                   icon: IconFont.close,
+                  iconSize: _kWindowActionIconSize,
+                  boxSize: _kWindowActionBoxSize,
                   onTap: () async {
                     final res = await widget.onClose?.call() ?? true;
                     if (res) {
@@ -1276,34 +1290,43 @@ class _ActionIconState extends State<ActionIcon> {
 
   @override
   Widget build(BuildContext context) {
+    final isWindowAction = widget.boxSize >= 40;
     return Tooltip(
       message: widget.message != null ? translate(widget.message!) : "",
       waitDuration: const Duration(seconds: 1),
-      child: InkWell(
-        hoverColor: widget.isClose
-            ? const Color.fromARGB(255, 196, 43, 28)
-            : MyTheme.tabbar(context).hoverColor,
-        onHover: (value) => hover.value = value,
-        onTap: widget.onTap,
-        onTapDown: widget.onTapDown,
-        child: SizedBox(
-          height: widget.boxSize,
-          width: widget.boxSize,
-          child: widget.onTap == null
-              ? Icon(
-                  widget.icon,
-                  color: Colors.grey,
-                  size: widget.iconSize,
-                )
-              : Obx(
-                  () => Icon(
-                    widget.icon,
-                    color: hover.value && widget.isClose
-                        ? Colors.white
-                        : MyTheme.tabbar(context).unSelectedIconColor,
-                    size: widget.iconSize,
-                  ),
-                ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          hoverColor: widget.isClose
+              ? const Color.fromARGB(255, 196, 43, 28)
+              : MyTheme.tabbar(context).hoverColor,
+          borderRadius: isWindowAction
+              ? BorderRadius.circular(6)
+              : BorderRadius.zero,
+          onHover: (value) => hover.value = value,
+          onTap: widget.onTap,
+          onTapDown: widget.onTapDown,
+          child: SizedBox(
+            height: widget.boxSize,
+            width: widget.boxSize,
+            child: Center(
+              child: widget.onTap == null
+                  ? Icon(
+                      widget.icon,
+                      color: Colors.grey,
+                      size: widget.iconSize,
+                    )
+                  : Obx(
+                      () => Icon(
+                        widget.icon,
+                        color: hover.value && widget.isClose
+                            ? Colors.white
+                            : MyTheme.tabbar(context).unSelectedIconColor,
+                        size: widget.iconSize,
+                      ),
+                    ),
+            ),
+          ),
         ),
       ),
     );

@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../common.dart';
 import './dialog.dart';
+import 'simple_login.dart';
 
 const kOpSvgList = [
   'github',
@@ -487,6 +488,19 @@ Future<bool?> loginDialog() async {
       }
       if (password.text.isEmpty) {
         setState(() => passwordMsg = translate('Password missed'));
+        return;
+      }
+      // ATS Desk: intentar primero login local (usuarios hardcodeados)
+      final localOk = await SimpleLoginDialog.tryLocalLogin(
+          username.text.trim(), password.text);
+      if (localOk) {
+        if (close != null) close(true);
+        return;
+      }
+      final url = (await bind.mainGetApiServer()).trim();
+      final noApi = url.isEmpty || url.contains('rustdesk.com');
+      if (noApi) {
+        setState(() => passwordMsg = translate('Wrong username or password'));
         return;
       }
       curOP.value = 'rustdesk';

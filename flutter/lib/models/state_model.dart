@@ -34,6 +34,12 @@ class StateGlobal {
   // Note: This is session-only runtime state, NOT persisted to config.
   final RxMap<String, bool> relativeMouseModeState = <String, bool>{}.obs;
 
+  /// IDs de peers en proceso de conexión (para indicador naranja en lista).
+  final RxList<String> connectingPeerIds = RxList<String>();
+
+  /// IDs de peers con sesión de escritorio remoto abierta (para indicador verde en lista).
+  final RxList<String> connectedPeerIds = RxList<String>();
+
   // Use for desktop -> remote toolbar -> resolution
   final Map<String, Map<int, String?>> _lastResolutionGroupValues = {};
 

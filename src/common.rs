@@ -1012,7 +1012,9 @@ pub fn is_rustdesk() -> bool {
 
 #[inline]
 pub fn get_uri_prefix() -> String {
-    format!("{}://", get_app_name().to_lowercase())
+    // ATS Desk: usar esquema sin espacios (atsdesk:// en lugar de ats desk://)
+    let app_name = get_app_name().to_lowercase().replace(" ", "");
+    format!("{}://", app_name)
 }
 
 #[cfg(target_os = "macos")]
@@ -1050,6 +1052,10 @@ pub fn get_api_server(api: String, custom: String) -> String {
         return "".to_owned();
     }
     let mut res = get_api_server_(api, custom);
+    // ATS Desk: no devolver nunca URL pública de RustDesk
+    if is_public(&res) {
+        return String::new();
+    }
     if res.ends_with('/') {
         res.pop();
     }
@@ -1065,15 +1071,16 @@ pub fn get_api_server(api: String, custom: String) -> String {
 fn get_api_server_(api: String, custom: String) -> String {
     #[cfg(windows)]
     if let Ok(lic) = crate::platform::windows::get_license_from_exe_name() {
-        if !lic.api.is_empty() {
+        if !lic.api.is_empty() && !is_public(&lic.api) {
             return lic.api.clone();
         }
     }
-    if !api.is_empty() {
+    // ATS Desk: no usar servidor público de RustDesk aunque esté guardado en config
+    if !api.is_empty() && !is_public(&api) {
         return api.to_owned();
     }
     let api = option_env!("API_SERVER").unwrap_or_default();
-    if !api.is_empty() {
+    if !api.is_empty() && !is_public(&api) {
         return api.into();
     }
     let s0 = get_custom_rendezvous_server(custom);
@@ -1085,7 +1092,8 @@ fn get_api_server_(api: String, custom: String) -> String {
             return format!("http://{}", s);
         }
     }
-    "https://admin.rustdesk.com".to_owned()
+    // ATS Desk: sin servidor API propio no usar RustDesk (evitar DNS/red)
+    String::new()
 }
 
 #[inline]
