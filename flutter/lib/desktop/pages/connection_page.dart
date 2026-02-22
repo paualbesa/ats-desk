@@ -15,6 +15,7 @@ import '../../common.dart';
 import '../../common/formatter/id_formatter.dart';
 import '../../common/widgets/peer_tab_page.dart';
 import '../../common/widgets/peer_card.dart';
+import '../../common/widgets/recent_connections_center_view.dart';
 import '../../common/widgets/autocomplete.dart';
 import '../../models/platform_model.dart';
 
@@ -308,50 +309,15 @@ class _ConnectionPageState extends State<ConnectionPage>
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Barra de vista: 1, 2, 4, 9, 16 pantallas y botón fullscreen
-            Obx(() {
-              if (peerCardUiType.value != PeerUiType.grid) return const SizedBox.shrink();
-              return _buildGridToolbar(context);
-            }),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(left: 12.0),
-                child: PeerTabPage(),
-              ),
-            ),
-          ],
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(left: 12.0),
+            child: RecentConnectionsCenterView(),
+          ),
         ),
-        // Botón fullscreen flotante: entrar/salir (siempre visible en modo grid)
-        Obx(() {
-          if (peerCardUiType.value != PeerUiType.grid) return const SizedBox.shrink();
-          final isFullscreen = stateGlobal.fullscreen.isTrue;
-          return Positioned(
-            top: 16,
-            right: 16,
-            child: Material(
-              elevation: 6,
-              borderRadius: BorderRadius.circular(8),
-              color: Colors.grey.shade400,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: () => stateGlobal.setFullscreen(!isFullscreen, procWnd: false),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  child: Icon(
-                    isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
       ],
     );
   }

@@ -1781,8 +1781,11 @@ class VirtualMouseMode with ChangeNotifier {
 
 class ImageModel with ChangeNotifier {
   ui.Image? _image;
+  ui.Image? _thumbnailImage;
 
   ui.Image? get image => _image;
+  /// Copia de la primera imagen recibida, para guardar miniatura al cerrar (útil cuando se usa texture y _image queda null).
+  ui.Image? get thumbnailImage => _thumbnailImage;
 
   String id = '';
 
@@ -1792,7 +1795,8 @@ class ImageModel with ChangeNotifier {
 
   WeakReference<FFI> parent;
 
-  final List<Function(String)> callbacksOnFirstImage = [];
+  final List<void Function(String peerId, ui.Image? image)> callbacksOnFirstImage = [];
+  bool _firstImageCallbackFired = false;
 
   ImageModel(this.parent) {
     sessionId = parent.target!.sessionId;
@@ -1800,7 +1804,8 @@ class ImageModel with ChangeNotifier {
 
   get useTextureRender => _useTextureRender;
 
-  addCallbackOnFirstImage(Function(String) cb) => callbacksOnFirstImage.add(cb);
+  addCallbackOnFirstImage(void Function(String peerId, ui.Image? image) cb) =>
+      callbacksOnFirstImage.add(cb);
 
   clearImage() => _image = null;
 
@@ -1859,10 +1864,38 @@ class ImageModel with ChangeNotifier {
       if (parent.target != null) {
         await initializeCursorAndCanvas(parent.target!);
       }
+      if (_thumbnailImage == null) _copyFirstFrameToThumbnail(image!);
     }
     _image?.dispose();
     _image = image;
-    if (image != null) notifyListeners();
+    if (image != null) {
+      notifyListeners();
+      if (!_firstImageCallbackFired) {
+        _firstImageCallbackFired = true;
+        final peerId = parent.target?.id ?? '';
+        for (final cb in callbacksOnFirstImage) {
+          cb(peerId, image);
+        }
+      }
+    }
+  }
+
+  void _copyFirstFrameToThumbnail(ui.Image image) {
+    image.toByteData(format: ui.ImageByteFormat.rawRgba).then((byteData) async {
+      if (byteData == null || _thumbnailImage != null) return;
+      try {
+        final w = image.width;
+        final h = image.height;
+        final pixels = byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes);
+        final copy = await img.decodeImageFromPixels(
+          pixels,
+          w,
+          h,
+          isWeb | isWindows | isLinux ? ui.PixelFormat.rgba8888 : ui.PixelFormat.bgra8888,
+        );
+        if (copy != null && _thumbnailImage == null) _thumbnailImage = copy;
+      } catch (_) {}
+    });
   }
 
   // mobile only
@@ -1899,6 +1932,8 @@ class ImageModel with ChangeNotifier {
   void disposeImage() {
     _image?.dispose();
     _image = null;
+    _thumbnailImage?.dispose();
+    _thumbnailImage = null;
   }
 }
 
@@ -3742,8 +3777,8 @@ class FFI {
           }
           final rgba = platformFFI.getRgba(sessionId, display, sz);
           if (rgba != null) {
-            onEvent2UIRgba();
             await imageModel.onRgba(display, rgba);
+            onEvent2UIRgba();
           } else {
             platformFFI.nextRgba(sessionId, display);
           }
@@ -3777,9 +3812,7 @@ class FFI {
       await canvasModel.updateViewStyle();
       await canvasModel.updateScrollStyle();
       await canvasModel.initializeEdgeScrollEdgeThickness();
-      for (final cb in imageModel.callbacksOnFirstImage) {
-        cb(id);
-      }
+      // Los callbacks de primera imagen se invocan desde ImageModel.update() cuando _image está asignada
     }
   }
 

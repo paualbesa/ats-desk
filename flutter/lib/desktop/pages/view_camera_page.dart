@@ -102,7 +102,7 @@ class _ViewCameraPageState extends State<ViewCameraPage>
     super.initState();
     _ffi = FFI(widget.sessionId);
     Get.put<FFI>(_ffi, tag: widget.id);
-    _ffi.imageModel.addCallbackOnFirstImage((String peerId) {
+    _ffi.imageModel.addCallbackOnFirstImage((String peerId, dynamic image) {
       showKBLayoutTypeChooserIfNeeded(
           _ffi.ffiModel.pi.platform, _ffi.dialogManager);
       _ffi.recordingModel

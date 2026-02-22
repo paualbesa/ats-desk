@@ -222,6 +222,9 @@ pub struct FlutterHandler {
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     hooks: Arc<RwLock<HashMap<String, SessionHook>>>,
     use_texture_render: Arc<AtomicBool>,
+    /// When using texture render, we send one Rgba frame per display so Flutter can save a thumbnail.
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    thumbnail_rgba_sent_for_displays: Arc<RwLock<HashSet<usize>>>,
 }
 
 impl Default for FlutterHandler {
@@ -235,6 +238,8 @@ impl Default for FlutterHandler {
             use_texture_render: Arc::new(
                 AtomicBool::new(crate::ui_interface::use_texture_render()),
             ),
+            #[cfg(not(any(target_os = "android", target_os = "ios")))]
+            thumbnail_rgba_sent_for_displays: Default::default(),
         }
     }
 }
@@ -658,6 +663,8 @@ impl FlutterHandler {
         self.use_texture_render
             .store(crate::ui_interface::use_texture_render(), Ordering::Relaxed);
         self.display_rgbas.write().unwrap().clear();
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
+        self.thumbnail_rgba_sent_for_displays.write().unwrap().clear();
     }
 }
 
@@ -864,7 +871,9 @@ impl InvokeUiSession for FlutterHandler {
     fn on_rgba(&self, display: usize, rgba: &mut scrap::ImageRgb) {
         let use_texture_render = self.use_texture_render.load(Ordering::Relaxed);
         self.on_rgba_flutter_texture_render(use_texture_render, display, rgba);
-        if !use_texture_render {
+        if use_texture_render {
+            self.try_send_one_rgba_for_thumbnail(display, rgba);
+        } else {
             self.on_rgba_soft_render(display, rgba);
         }
     }
@@ -1258,6 +1267,44 @@ impl FlutterHandler {
                     if let Some(stream) = &session.event_stream {
                         stream.add(EventToUI::Texture(display, false));
                     }
+                }
+            }
+        }
+    }
+
+    /// When using texture render, send one Rgba frame per display so Flutter can fetch it and save a thumbnail.
+    #[inline]
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    fn try_send_one_rgba_for_thumbnail(&self, display: usize, rgba: &scrap::ImageRgb) {
+        let already_sent = {
+            let mut set = self.thumbnail_rgba_sent_for_displays.write().unwrap();
+            if set.contains(&display) {
+                true
+            } else {
+                set.insert(display);
+                false
+            }
+        };
+        if already_sent {
+            return;
+        }
+        log::info!(
+            "[thumbnail] Sending first Rgba frame for display {} ({} bytes) so Flutter can save thumbnail",
+            display,
+            rgba.raw.len()
+        );
+        let data = rgba.raw.clone();
+        {
+            let mut rgba_lock = self.display_rgbas.write().unwrap();
+            let rgba_data = rgba_lock.entry(display).or_default();
+            rgba_data.data = data;
+            rgba_data.valid = true;
+        }
+        for h in self.session_handlers.read().unwrap().values() {
+            if h.displays.is_empty() || h.displays.contains(&display) {
+                if let Some(stream) = &h.event_stream {
+                    stream.add(EventToUI::Rgba(display));
+                    break;
                 }
             }
         }

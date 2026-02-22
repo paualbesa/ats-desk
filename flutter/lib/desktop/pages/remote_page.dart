@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:desktop_multi_window/desktop_multi_window.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -28,6 +31,39 @@ import 'package:flutter_hbb/native/custom_cursor.dart'
     if (dart.library.html) 'package:flutter_hbb/web/custom_cursor.dart';
 
 final SimpleWrapper<bool> _firstEnterImage = SimpleWrapper(false);
+
+/// Guarda miniatura a partir de una imagen (para callback de primera imagen).
+Future<void> _saveThumbnailFromImage(ui.Image image, String peerId) async {
+  if (isWeb) return;
+  try {
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    if (byteData == null) return;
+    final dir = await getApplicationDocumentsDirectory();
+    final subdir = Directory('${dir.path}/ats_desk_thumbnails');
+    if (!await subdir.exists()) await subdir.create(recursive: true);
+    final safeId = peerId.replaceAll(RegExp(r'[^\w\-.]'), '_');
+    final path = '${subdir.path}/last_$safeId.png';
+    final file = File(path);
+    final bytes = byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes);
+    await file.writeAsBytes(bytes);
+    stateGlobal.lastSeenThumbnailPath[peerId] = path;
+    stateGlobal.lastSeenThumbnailPath.refresh();
+    debugPrint('[thumbnail] Saved for peerId=$peerId path=$path');
+  } catch (e) {
+    debugPrint('[thumbnail] Save failed for peerId=$peerId: $e');
+  }
+}
+
+/// Guarda miniatura de la última imagen vista para mostrarla en el centro (estilo AnyDesk).
+Future<void> _saveLastSeenThumbnailIfPossible(FFI ffi, String peerId) async {
+  if (isWeb) return;
+  final image = ffi.imageModel.image ?? ffi.imageModel.thumbnailImage;
+  if (image == null) {
+    debugPrint('[thumbnail] Save skipped: no image nor thumbnailImage for peerId=$peerId');
+    return;
+  }
+  await _saveThumbnailFromImage(image, peerId);
+}
 
 // Used to skip session close if "move to new window" is clicked.
 final Map<String, bool> closeSessionOnDispose = {};
@@ -85,6 +121,7 @@ class _RemotePageState extends State<RemotePage>
         MultiWindowListener,
         TickerProviderStateMixin {
   Timer? _timer;
+  Timer? _thumbnailSaveTimer;
   String keyboardMode = "legacy";
   bool _isWindowBlur = false;
   final _cursorOverImage = false.obs;
@@ -127,12 +164,14 @@ class _RemotePageState extends State<RemotePage>
     super.initState();
     _ffi = FFI(widget.sessionId);
     Get.put<FFI>(_ffi, tag: widget.id);
-    _ffi.imageModel.addCallbackOnFirstImage((String peerId) {
+    _ffi.imageModel.addCallbackOnFirstImage((String peerId, ui.Image? image) {
+      debugPrint('[thumbnail] First image callback peerId=$peerId image=${image != null}');
       _ffi.canvasModel.activateLocalCursor();
       showKBLayoutTypeChooserIfNeeded(
           _ffi.ffiModel.pi.platform, _ffi.dialogManager);
       _ffi.recordingModel
           .updateStatus(bind.sessionGetIsRecording(sessionId: _ffi.sessionId));
+      if (!isWeb && image != null) _saveThumbnailFromImage(image, peerId);
     });
     _ffi.canvasModel.initializeEdgeScrollFallback(this);
     _ffi.start(
@@ -185,6 +224,13 @@ class _RemotePageState extends State<RemotePage>
     // Register callback to cancel debounce timer when relative mouse mode is disabled
     _ffi.inputModel.onRelativeMouseModeDisabled =
         _cancelPointerLockCenterDebounceTimer;
+
+    // Guardar miniatura periódicamente por si al cerrar se usa texture y no hay image
+    if (!isWeb) {
+      _thumbnailSaveTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+        _saveLastSeenThumbnailIfPossible(_ffi, widget.id);
+      });
+    }
   }
 
   /// Cancel the pointer lock center debounce timer
@@ -325,6 +371,8 @@ class _RemotePageState extends State<RemotePage>
 
     _pointerLockCenterDebounceTimer?.cancel();
     _pointerLockCenterDebounceTimer = null;
+    // Guardar miniatura lo antes posible, antes de liberar textura/imagen
+    await _saveLastSeenThumbnailIfPossible(_ffi, widget.id);
     // Clear callback reference to prevent memory leaks and stale references
     _ffi.inputModel.onRelativeMouseModeDisabled = null;
     // Relative mouse mode cleanup is centralized in FFI.close(closeSession: ...).
@@ -340,6 +388,8 @@ class _RemotePageState extends State<RemotePage>
     _rawKeyFocusNode.dispose();
     await _ffi.close(closeSession: closeSession);
     _timer?.cancel();
+    _thumbnailSaveTimer?.cancel();
+    _thumbnailSaveTimer = null;
     _ffi.dialogManager.dismissAll();
     if (closeSession) {
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,

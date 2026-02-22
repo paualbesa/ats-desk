@@ -58,6 +58,12 @@ class StateGlobal {
   /// Por windowId: callback para abrir el diálogo "Minimizar a cuadrícula" (solo ventana remota).
   final Map<int, VoidCallback?> showMinimizeToGridDialogByWindow = {};
 
+  /// Ruta local de la miniatura "última imagen vista" por peer (peerId -> path). Se puede rellenar al cerrar sesión.
+  final RxMap<String, String> lastSeenThumbnailPath = <String, String>{}.obs;
+
+  /// IDs de favoritos (sincronizado con mainGetFav/mainStoreFav). Usar para UI reactiva sin N llamadas async.
+  final RxList<String> favoriteIds = RxList<String>();
+
   // Use for desktop -> remote toolbar -> resolution
   final Map<String, Map<int, String?>> _lastResolutionGroupValues = {};
 
@@ -93,7 +99,8 @@ class StateGlobal {
         refreshResizeEdgeSize();
       }
       if (!isMacOS) {
-        _windowBorderWidth.value = v ? 0 : kWindowBorderWidth;
+        if (!v) applyWindowBorderPreference();
+        else _windowBorderWidth.value = 0;
       }
     }
   }
@@ -125,10 +132,18 @@ class StateGlobal {
     }
   }
 
+  /// Aplica la preferencia "ocultar bordes" (guardada en Flutter). Llamar al cambiar la opción o al iniciar.
+  void applyWindowBorderPreference() {
+    final hide = bind.getLocalFlutterOption(k: 'hide_window_borders') == 'Y';
+    _windowBorderWidth.value = (fullscreen.isTrue || isMaximized.isTrue || hide)
+        ? 0.0
+        : kWindowBorderWidth;
+  }
+
   procFullscreenNative(bool procWnd) {
     refreshResizeEdgeSize();
     print("fullscreen: $fullscreen, resizeEdgeSize: ${_resizeEdgeSize.value}");
-    _windowBorderWidth.value = fullscreen.isTrue ? 0 : kWindowBorderWidth;
+    applyWindowBorderPreference();
     if (procWnd) {
       final wc = WindowController.fromWindowId(windowId);
       wc.setFullscreen(_fullscreen.isTrue).then((_) {

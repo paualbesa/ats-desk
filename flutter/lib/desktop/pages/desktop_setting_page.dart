@@ -489,6 +489,18 @@ class _GeneralState extends State<_General> {
           kOptionOpenNewConnInTabs,
           isServer: false,
         ),
+        if (!isWeb && !bind.isIncomingOnly())
+          _OptionCheckBox(
+            context,
+            localeName.startsWith('es') ? 'Ocultar bordes de ventanas' : 'Hide window borders',
+            'hide_window_borders',
+            isServer: false,
+            optGetter: () => bind.getLocalFlutterOption(k: 'hide_window_borders') == 'Y',
+            optSetter: (k, v) async {
+              await bind.setLocalFlutterOption(k: k, v: v ? 'Y' : 'N');
+              stateGlobal.applyWindowBorderPreference();
+            },
+          ),
         // though this is related to GUI, but opengl problem affects all users, so put in config rather than local
         if (isLinux)
           Tooltip(
