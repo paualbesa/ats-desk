@@ -13,6 +13,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `cargo build --release` - Build Rust binary in release mode
 - `cargo build --features hwcodec` - Build with specific features
 
+### Flutter Windows (requisito previo)
+- **Antes de `flutter run` o `flutter build windows`** hay que compilar la DLL de Rust con el feature `flutter`, o verás "Failed to get rustdesk_core_main":
+  - Debug: `cargo build --features flutter --lib` (genera `target\debug\librustdesk.dll`)
+  - Release: `cargo build --features flutter --lib --release` (genera `target\release\librustdesk.dll`)
+- CMake copia la DLL desde `target/<Debug|Release>/librustdesk.dll` al ejecutable de Flutter.
+
 ### Flutter Mobile Commands
 - `cd flutter && flutter build android` - Build Android APK
 - `cd flutter && flutter build ios` - Build iOS app
@@ -89,3 +95,8 @@ All configurations or options are under `libs/hbb_common/src/config.rs` file, 4 
 - Local
 - Display
 - Built-in
+
+### ATS Desk / Custom client
+- Si el nombre de la app no es "RustDesk" (custom client), la opción **ID/Relay Server** en Ajustes → Red está **oculta por defecto**.
+- **Config sin firma**: archivo `custom_client_config.json` junto al ejecutable (o ruta en env **`ATS_DESK_CONFIG`**) con JSON: `app-name`, `default-settings`, `override-settings`. Permite definir servidor (custom-rendezvous-server, relay-server, api-server) y opciones built-in (hide-*-settings, etc.) sin firmar. Ver `load_unsigned_custom_config` en `src/common.rs`.
+- **Guía completa**: `docs/ATS_DESK_DEPLOY.md` (servidor, ocultar opciones, cuenta/login, permisos, branding, pruebas). Ejemplo de config: `custom_client_config.json.example`.

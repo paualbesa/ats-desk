@@ -1795,26 +1795,58 @@ pub fn rustdesk_interval(i: Interval) -> ThrottledInterval {
     ThrottledInterval::new(i)
 }
 
+/// Nombre del archivo de config sin firma (ID/relay/API y opciones) para custom client.
+/// Se busca junto al ejecutable o en la ruta del env ATS_DESK_CONFIG.
+const UNSIGNED_CONFIG_FILENAME: &str = "custom_client_config.json";
+
 pub fn load_custom_client() {
     #[cfg(debug_assertions)]
     if let Ok(data) = std::fs::read_to_string("./custom.txt") {
         read_custom_client(data.trim());
+        load_unsigned_custom_config();
         return;
     }
-    let Some(path) = std::env::current_exe().map_or(None, |x| x.parent().map(|x| x.to_path_buf()))
+    let Some(exe_dir) = std::env::current_exe().ok().and_then(|p| p.parent().map(|p| p.to_path_buf()))
     else {
+        load_unsigned_custom_config();
         return;
     };
     #[cfg(target_os = "macos")]
-    let path = path.join("../Resources");
-    let path = path.join("custom.txt");
-    if path.is_file() {
-        let Ok(data) = std::fs::read_to_string(&path) else {
+    let exe_dir = exe_dir.join("../Resources");
+    let custom_txt = exe_dir.join("custom.txt");
+    if custom_txt.is_file() {
+        if let Ok(data) = std::fs::read_to_string(&custom_txt) {
+            read_custom_client(data.trim());
+        } else {
             log::error!("Failed to read custom client config");
-            return;
-        };
-        read_custom_client(&data.trim());
+        }
     }
+    load_unsigned_custom_config();
+}
+
+/// Carga config JSON sin firma (custom_client_config.json o ATS_DESK_CONFIG).
+/// Permite definir servidor ID/relay/API y opciones built-in sin firmar.
+/// Formato: mismo que custom firmado pero en JSON plano: app-name, default-settings, override-settings.
+fn load_unsigned_custom_config() {
+    let path = std::env::var("ATS_DESK_CONFIG").ok().map(std::path::PathBuf::from)
+        .or_else(|| {
+            std::env::current_exe().ok()
+                .and_then(|p| p.parent().map(|p| p.join(UNSIGNED_CONFIG_FILENAME)))
+        });
+    let Some(path) = path else { return };
+    if !path.is_file() {
+        return;
+    }
+    let Ok(content) = std::fs::read_to_string(&path) else {
+        log::error!("Failed to read unsigned config: {}", path.display());
+        return;
+    };
+    let Ok(mut data) = serde_json::from_str::<std::collections::HashMap<String, serde_json::Value>>(&content) else {
+        log::error!("Invalid JSON in unsigned config: {}", path.display());
+        return;
+    };
+    log::info!("Loading unsigned custom client config from {}", path.display());
+    apply_custom_client_data(&mut data);
 }
 
 fn read_custom_client_advanced_settings(
@@ -1913,7 +1945,11 @@ pub fn read_custom_client(config: &str) {
         log::error!("Failed to parse custom client config");
         return;
     };
+    apply_custom_client_data(&mut data);
+}
 
+/// Aplica un mapa de config (custom firmado o JSON sin firma). Claves: app-name, default-settings, override-settings; el resto a HARD_SETTINGS.
+fn apply_custom_client_data(data: &mut std::collections::HashMap<String, serde_json::Value>) {
     if let Some(app_name) = data.remove("app-name") {
         if let Some(app_name) = app_name.as_str() {
             *config::APP_NAME.write().unwrap() = app_name.to_owned();
@@ -1932,9 +1968,9 @@ pub fn read_custom_client(config: &str) {
     for s in keys::KEYS_SETTINGS {
         map_settings.insert(s.replace("_", "-"), s);
     }
-    let mut buildin_settings = HashMap::new();
+    let mut map_buildin_settings = HashMap::new();
     for s in keys::KEYS_BUILDIN_SETTINGS {
-        buildin_settings.insert(s.replace("_", "-"), s);
+        map_buildin_settings.insert(s.replace("_", "-"), s);
     }
     if let Some(default_settings) = data.remove("default-settings") {
         read_custom_client_advanced_settings(
@@ -1942,7 +1978,7 @@ pub fn read_custom_client(config: &str) {
             &map_display_settings,
             &map_local_settings,
             &map_settings,
-            &buildin_settings,
+            &map_buildin_settings,
             false,
         );
     }
@@ -1952,17 +1988,17 @@ pub fn read_custom_client(config: &str) {
             &map_display_settings,
             &map_local_settings,
             &map_settings,
-            &buildin_settings,
+            &map_buildin_settings,
             true,
         );
     }
-    for (k, v) in data {
+    for (k, v) in data.drain() {
         if let Some(v) = v.as_str() {
             config::HARD_SETTINGS
                 .write()
                 .unwrap()
                 .insert(k, v.to_owned());
-        };
+        }
     }
 }
 

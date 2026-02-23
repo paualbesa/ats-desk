@@ -49,6 +49,8 @@ class _LeftPanelPeerListState extends State<LeftPanelPeerList> {
     (() async {
       final favs = (await bind.mainGetFav()).toList();
       stateGlobal.favoriteIds.assignAll(favs);
+      stateGlobal.favoriteIds.refresh();
+      debugPrint('[fav] left_panel init: favoriteIds loaded count=${favs.length} ids=$favs');
     })();
     gFFI.abModel.pullAb(force: ForcePullAb.listAndCurrent, quiet: true);
     // Empezar sin estado en caché para no mostrar verde hasta tener respuesta real
@@ -157,6 +159,8 @@ class _AddressRow extends StatelessWidget {
           }
           await bind.mainStoreFav(favs: favs);
           stateGlobal.favoriteIds.assignAll(favs);
+          stateGlobal.favoriteIds.refresh();
+          debugPrint('[fav] left_panel entry menu: favoriteIds updated count=${favs.length} ids=$favs');
           bind.mainLoadFavPeers();
           if (context.mounted) showToast(translate('Successful'));
         },
@@ -400,6 +404,8 @@ class _PeerRow extends StatelessWidget {
           }
           await bind.mainStoreFav(favs: favs);
           stateGlobal.favoriteIds.assignAll(favs);
+          stateGlobal.favoriteIds.refresh();
+          debugPrint('[fav] left_panel peer menu: favoriteIds updated count=${favs.length} ids=$favs');
           bind.mainLoadFavPeers();
           if (context.mounted) showToast(translate('Successful'));
         },

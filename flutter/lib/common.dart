@@ -704,6 +704,10 @@ String formatDurationToTime(Duration duration) {
 }
 
 closeConnection({String? id}) {
+  if (id != null && id.isNotEmpty) {
+    stateGlobal.connectedPeerIds.remove(id);
+    stateGlobal.connectingPeerIds.remove(id);
+  }
   if (isAndroid || isIOS) {
     () async {
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
@@ -3646,7 +3650,8 @@ Color? disabledTextColor(BuildContext context, bool enabled) {
 }
 
 Widget loadPowered(BuildContext context) {
-  if (bind.mainGetBuildinOption(key: "hide-powered-by-me") == 'Y') {
+  if (bind.mainGetBuildinOption(key: "hide-powered-by-me") == 'Y' ||
+      bind.isCustomClient()) {
     return SizedBox.shrink();
   }
   return MouseRegion(

@@ -1831,6 +1831,7 @@ class ImageModel with ChangeNotifier {
   }
 
   onRgba(int display, Uint8List rgba) async {
+    debugPrint('[thumbnail] ImageModel.onRgba display=$display rgba.length=${rgba.length}');
     try {
       await decodeAndUpdate(display, rgba);
     } catch (e) {
@@ -1842,6 +1843,7 @@ class ImageModel with ChangeNotifier {
   decodeAndUpdate(int display, Uint8List rgba) async {
     final pid = parent.target?.id;
     final rect = parent.target?.ffiModel.pi.getDisplayRect(display);
+    debugPrint('[thumbnail] decodeAndUpdate display=$display rect=$rect rgba.length=${rgba.length}');
     final image = await img.decodeImageFromPixels(
       rgba,
       rect?.width.toInt() ?? 0,
@@ -1873,6 +1875,7 @@ class ImageModel with ChangeNotifier {
       if (!_firstImageCallbackFired) {
         _firstImageCallbackFired = true;
         final peerId = parent.target?.id ?? '';
+        debugPrint('[thumbnail] ImageModel.update: firing firstImage callbacks peerId=$peerId');
         for (final cb in callbacksOnFirstImage) {
           cb(peerId, image);
         }
@@ -3769,13 +3772,16 @@ class FFI {
           }
         } else if (message is EventToUI_Rgba) {
           final display = message.field0;
+          debugPrint('[thumbnail] EventToUI_Rgba received display=$display');
           // Fetch the image buffer from rust codes.
           final sz = platformFFI.getRgbaSize(sessionId, display);
+          debugPrint('[thumbnail] getRgbaSize(sessionId, $display)=$sz');
           if (sz == 0) {
             platformFFI.nextRgba(sessionId, display);
             return;
           }
           final rgba = platformFFI.getRgba(sessionId, display, sz);
+          debugPrint('[thumbnail] getRgba returned ${rgba != null ? "${rgba.length} bytes" : "null"}');
           if (rgba != null) {
             await imageModel.onRgba(display, rgba);
             onEvent2UIRgba();

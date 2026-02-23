@@ -1,0 +1,11 @@
+{
+  "app-name": "ATS Desk",
+  "override-settings": {
+    "custom-rendezvous-server": "vuestro-servidor-id.ejemplo.com:21116",
+    "relay-server": "vuestro-servidor-relay.ejemplo.com:21117",
+    "api-server": "https://vuestro-servidor-api.ejemplo.com",
+    "hide-proxy-settings": "Y",
+    "hide-websocket-settings": "Y",
+    "hide-powered-by-me": "Y"
+  }
+}

@@ -57,11 +57,14 @@ Future<void> _saveThumbnailFromImage(ui.Image image, String peerId) async {
 /// Guarda miniatura de la última imagen vista para mostrarla en el centro (estilo AnyDesk).
 Future<void> _saveLastSeenThumbnailIfPossible(FFI ffi, String peerId) async {
   if (isWeb) return;
+  final hasImage = ffi.imageModel.image != null;
+  final hasThumb = ffi.imageModel.thumbnailImage != null;
   final image = ffi.imageModel.image ?? ffi.imageModel.thumbnailImage;
   if (image == null) {
-    debugPrint('[thumbnail] Save skipped: no image nor thumbnailImage for peerId=$peerId');
+    debugPrint('[thumbnail] Save skipped: no image nor thumbnailImage for peerId=$peerId (image=$hasImage thumbnailImage=$hasThumb)');
     return;
   }
+  debugPrint('[thumbnail] Saving from ${hasImage ? "image" : "thumbnailImage"} for peerId=$peerId');
   await _saveThumbnailFromImage(image, peerId);
 }
 
@@ -364,6 +367,8 @@ class _RemotePageState extends State<RemotePage>
     // https://github.com/flutter/flutter/issues/64935
     super.dispose();
     debugPrint("REMOTE PAGE dispose session $sessionId ${widget.id}");
+    stateGlobal.connectedPeerIds.remove(widget.id);
+    stateGlobal.connectingPeerIds.remove(widget.id);
 
     // Defensive cleanup: ensure host system-key propagation is reset even if
     // MouseRegion.onExit never fired (e.g., tab closed while cursor inside).

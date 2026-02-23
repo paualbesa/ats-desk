@@ -872,6 +872,11 @@ impl InvokeUiSession for FlutterHandler {
         let use_texture_render = self.use_texture_render.load(Ordering::Relaxed);
         self.on_rgba_flutter_texture_render(use_texture_render, display, rgba);
         if use_texture_render {
+            log::debug!(
+                "[thumbnail] on_rgba display={} use_texture_render=true rgba.len={}",
+                display,
+                rgba.raw.len()
+            );
             self.try_send_one_rgba_for_thumbnail(display, rgba);
         } else {
             self.on_rgba_soft_render(display, rgba);
@@ -1286,12 +1291,22 @@ impl FlutterHandler {
             }
         };
         if already_sent {
+            log::debug!("[thumbnail] try_send_one_rgba_for_thumbnail display={} already_sent skip", display);
             return;
         }
+        let handlers = self.session_handlers.read().unwrap();
+        let num_handlers = handlers.len();
+        let displays_per_handler: Vec<Vec<i32>> = handlers
+            .values()
+            .map(|h| h.displays.iter().map(|&d| d as i32).collect())
+            .collect();
+        drop(handlers);
         log::info!(
-            "[thumbnail] Sending first Rgba frame for display {} ({} bytes) so Flutter can save thumbnail",
+            "[thumbnail] Sending first Rgba frame for display {} ({} bytes) num_handlers={} handler_displays={:?}",
             display,
-            rgba.raw.len()
+            rgba.raw.len(),
+            num_handlers,
+            displays_per_handler
         );
         let data = rgba.raw.clone();
         {
@@ -1300,12 +1315,25 @@ impl FlutterHandler {
             rgba_data.data = data;
             rgba_data.valid = true;
         }
+        let mut sent = false;
         for h in self.session_handlers.read().unwrap().values() {
             if h.displays.is_empty() || h.displays.contains(&display) {
                 if let Some(stream) = &h.event_stream {
                     stream.add(EventToUI::Rgba(display));
+                    sent = true;
+                    log::info!("[thumbnail] EventToUI::Rgba({}) sent to matching handler", display);
                     break;
                 }
+            }
+        }
+        if !sent {
+            if let Some(h) = self.session_handlers.read().unwrap().values().find(|h| h.event_stream.is_some()) {
+                if let Some(stream) = &h.event_stream {
+                    stream.add(EventToUI::Rgba(display));
+                    log::info!("[thumbnail] EventToUI::Rgba({}) sent via fallback (no matching display)", display);
+                }
+            } else {
+                log::warn!("[thumbnail] No session handler with event_stream found, Rgba not sent");
             }
         }
     }

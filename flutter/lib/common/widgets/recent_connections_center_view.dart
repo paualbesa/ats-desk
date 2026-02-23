@@ -96,7 +96,11 @@ class _RecentConnectionsCenterViewState extends State<RecentConnectionsCenterVie
   /// Carga favoritos una vez y los deja en stateGlobal.favoriteIds para UI reactiva.
   Future<void> _loadFavoritesIntoGlobal() async {
     final favs = (await bind.mainGetFav()).toList();
-    if (mounted) stateGlobal.favoriteIds.assignAll(favs);
+    if (mounted) {
+      stateGlobal.favoriteIds.assignAll(favs);
+      stateGlobal.favoriteIds.refresh();
+      debugPrint('[fav] _loadFavoritesIntoGlobal: favoriteIds updated, count=${favs.length}, ids=$favs');
+    }
   }
 
   /// Lista fusionada: primero recientes (orden por último acceso), luego libreta que no estén en recientes.
@@ -122,6 +126,7 @@ class _RecentConnectionsCenterViewState extends State<RecentConnectionsCenterVie
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Obx(() {
+      stateGlobal.favoriteIds.length;
       final peers = _mergedPeers();
       if (peers.isEmpty) {
         return Center(
@@ -213,6 +218,8 @@ class _ConnectionGridCard extends StatelessWidget {
     }
     await bind.mainStoreFav(favs: favs);
     stateGlobal.favoriteIds.assignAll(favs);
+    stateGlobal.favoriteIds.refresh();
+    debugPrint('[fav] _toggleFavorite: after refresh favoriteIds.length=${stateGlobal.favoriteIds.length} contains(${peer.id})=${stateGlobal.favoriteIds.contains(peer.id)} ids=$favs');
     bind.mainLoadFavPeers();
   }
 
@@ -240,6 +247,8 @@ class _ConnectionGridCard extends StatelessWidget {
             }
             await bind.mainStoreFav(favs: favs);
             stateGlobal.favoriteIds.assignAll(favs);
+            stateGlobal.favoriteIds.refresh();
+            debugPrint('[fav] context menu: favoriteIds updated, count=${favs.length}, ids=$favs');
             bind.mainLoadFavPeers();
           },
           child: ListTile(

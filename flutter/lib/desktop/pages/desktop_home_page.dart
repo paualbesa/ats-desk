@@ -509,6 +509,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               final name = nameController.text.trim();
               Navigator.of(ctx).pop();
               gFFI.operatorSharedListModel.add(id, name.isEmpty ? id : name);
+              stateGlobal.addressListOnlineStates[id] = false;
               bind.mainLoadRecentPeers();
               if (parentContext.mounted) showToast(translate('Successful'));
             },
