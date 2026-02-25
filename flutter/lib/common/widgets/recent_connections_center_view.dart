@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -235,6 +236,18 @@ class _ConnectionGridCard extends StatelessWidget {
           child: ListTile(
             leading: const Icon(Icons.link),
             title: Text(translate('Connect')),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        PopupMenuItem(
+          onTap: () {
+            Clipboard.setData(ClipboardData(text: peer.id));
+            final msg = localeName.startsWith('es') ? 'ID copiado' : 'ID copied';
+            showToast(msg);
+          },
+          child: ListTile(
+            leading: const Icon(Icons.copy),
+            title: Text(localeName.startsWith('es') ? 'Copiar ID' : 'Copy ID'),
             contentPadding: EdgeInsets.zero,
           ),
         ),

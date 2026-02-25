@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/common/widgets/peer_card.dart';
 import 'package:flutter_hbb/models/ab_model.dart';
@@ -143,6 +144,18 @@ class _AddressRow extends StatelessWidget {
         onTap: () {
           final peer = Peer.fromJson({'id': entry.id, 'alias': entry.name});
           connectInPeerTab(context, peer, PeerTabIndex.ab);
+        },
+      ),
+      PopupMenuItem(
+        child: ListTile(
+          leading: const Icon(Icons.copy),
+          title: Text(localeName.startsWith('es') ? 'Copiar ID' : 'Copy ID'),
+          contentPadding: EdgeInsets.zero,
+        ),
+        onTap: () {
+          Clipboard.setData(ClipboardData(text: entry.id));
+          final msg = localeName.startsWith('es') ? 'ID copiado' : 'ID copied';
+          showToast(msg);
         },
       ),
       PopupMenuItem(
@@ -389,6 +402,18 @@ class _PeerRow extends StatelessWidget {
           contentPadding: EdgeInsets.zero,
         ),
         onTap: () => connectInPeerTab(context, peer, tab),
+      ),
+      PopupMenuItem(
+        child: ListTile(
+          leading: const Icon(Icons.copy),
+          title: Text(localeName.startsWith('es') ? 'Copiar ID' : 'Copy ID'),
+          contentPadding: EdgeInsets.zero,
+        ),
+        onTap: () {
+          Clipboard.setData(ClipboardData(text: peer.id));
+          final msg = localeName.startsWith('es') ? 'ID copiado' : 'ID copied';
+          showToast(msg);
+        },
       ),
       PopupMenuItem(
         child: ListTile(
