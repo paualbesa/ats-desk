@@ -15,6 +15,7 @@
       "infoPlist": {
         "NSCameraUsageDescription": "ATS Desk usa la cámara para escanear códigos QR de conexión.",
         "NSMicrophoneUsageDescription": "ATS Desk puede usar el micrófono en sesiones remotas con audio.",
+        "ITSAppUsesNonExemptEncryption": false,
         "UIBackgroundModes": [
           "audio",
           "fetch"
