@@ -196,9 +196,28 @@ El script instala Node.js, PM2, RustDesk server (hbbs + hbbr) y los deja corrien
   "app-name": "ATS Desk",
   "override-settings": {
     "custom-rendezvous-server": "server.albesa.tech:21116",
-    "relay-server": "server.albesa.tech:21117"
+    "relay-server": "server.albesa.tech:21117",
+    "key": "CLAVE_PUBLICA_DE_id_ed25519.pub"
   }
 }
 ```
 
-> **Nota:** Si `server.albesa.tech` está detrás de Cloudflare, SSH y los puertos RustDesk deben apuntar a la IP real del servidor (registros DNS «solo DNS» / grey cloud), no al proxy naranja.
+La clave `key` es obligatoria con servidor propio. En el servidor:
+```bash
+cat ~/rustdesk-data/id_ed25519.pub
+```
+
+> **Nota:** Si `server.albesa.tech` está detrás de Cloudflare, los registros DNS deben estar en **solo DNS** (nube gris), no proxy naranja. RustDesk usa TCP/UDP en 21115–21119 y no funciona a través del proxy de Cloudflare.
+
+### Si aparece «Failed to connect to server…: Por favor intente mas tarde»
+
+1. **DNS:** `server.albesa.tech` debe resolver a la IP real del VPS (no a IPs de Cloudflare).
+2. **Puertos abiertos** en firewall del servidor: `21115/tcp`, `21116/tcp+udp`, `21117/tcp`, `21118/tcp`, `21119/tcp`.
+3. **Servidor activo:** `pm2 list` → proceso `ats-desk` en estado `online`.
+4. **Clave pública:** `key` en `custom_client_config.json` debe coincidir con `~/rustdesk-data/id_ed25519.pub`.
+5. **Config junto al exe:** `custom_client_config.json` debe estar en la misma carpeta que `ATS-Desk.exe`.
+6. **Prueba de red** (desde el PC cliente):
+   ```bat
+   Test-NetConnection server.albesa.tech -Port 21116
+   ```
+   `TcpTestSucceeded` debe ser `True`.
