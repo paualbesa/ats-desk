@@ -1,66 +1,49 @@
 #!/usr/bin/env bash
-# Instala y configura RustDesk server (hbbs + hbbr) con PM2 en Ubuntu.
-# Ejecutar en el servidor: bash setup-rustdesk-pm2.sh
+# Instala RustDesk server (hbbs + hbbr) con PM2 — sin sudo (instala en ~/bin y ~/rustdesk-data).
+# Ejecutar en el servidor: bash scripts/setup-rustdesk-pm2.sh
 set -euo pipefail
 
-RUSTDESK_DIR="${RUSTDESK_DIR:-/opt/rustdesk-server}"
-RUSTDESK_VERSION="${RUSTDESK_VERSION:-1.1.11-1}"
+RELAY_HOST="${RELAY_HOST:-server.albesa.tech}"
+RELAY_PORT="${RELAY_PORT:-21117}"
+VERSION="${RUSTDESK_VERSION:-1.1.11-1}"
+BIN_DIR="${HOME}/bin"
+DATA_DIR="${HOME}/rustdesk-data"
 
-echo "==> Instalando dependencias..."
-export DEBIAN_FRONTEND=noninteractive
-sudo apt-get update -qq
-sudo apt-get install -y -qq curl wget unzip
+mkdir -p "$BIN_DIR" "$DATA_DIR"
 
-echo "==> Instalando Node.js LTS (para PM2)..."
-if ! command -v node >/dev/null 2>&1; then
-  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-  sudo apt-get install -y -qq nodejs
+if [ ! -f "$BIN_DIR/hbbs" ]; then
+  echo "==> Descargando RustDesk server ${VERSION}..."
+  cd /tmp
+  wget -q "https://github.com/rustdesk/rustdesk-server/releases/download/${VERSION}/rustdesk-server-linux-amd64.zip" -O rd-server.zip
+  unzip -o rd-server.zip -d rd-server-extract
+  for bin in hbbs hbbr; do
+    f=$(find rd-server-extract -name "$bin" -type f | head -1)
+    cp "$f" "$BIN_DIR/"
+    chmod +x "$BIN_DIR/$bin"
+  done
 fi
 
-echo "==> Instalando PM2..."
+export PATH="$BIN_DIR:$PATH"
+
 if ! command -v pm2 >/dev/null 2>&1; then
-  sudo npm install -g pm2
+  echo "ERROR: PM2 no instalado. Instala con: npm install -g pm2"
+  exit 1
 fi
 
-echo "==> Descargando RustDesk server ${RUSTDESK_VERSION}..."
-sudo mkdir -p "$RUSTDESK_DIR"
-cd /tmp
-ARCH="$(uname -m)"
-case "$ARCH" in
-  x86_64)  DEB="rustdesk-server-hbbs_${RUSTDESK_VERSION}_amd64.deb" ;;
-  aarch64) DEB="rustdesk-server-hbbs_${RUSTDESK_VERSION}_arm64.deb" ;;
-  *) echo "Arquitectura no soportada: $ARCH"; exit 1 ;;
-esac
-wget -q "https://github.com/rustdesk/rustdesk-server/releases/download/${RUSTDESK_VERSION}/${DEB}" -O "$DEB"
-sudo dpkg -i "$DEB" || sudo apt-get install -f -y -qq
-
-echo "==> Configurando PM2 para hbbs y hbbr..."
-sudo mkdir -p /var/lib/rustdesk
-cd /var/lib/rustdesk
-
-# Detener instancias previas si existen
+cd "$DATA_DIR"
 pm2 delete rustdesk-hbbs 2>/dev/null || true
 pm2 delete rustdesk-hbbr 2>/dev/null || true
 
-# hbbs: ID server (puerto 21116 TCP/UDP, 21115 TCP, 21118 TCP WebSocket)
-pm2 start hbbs --name rustdesk-hbbs -- -r server.albesa.tech:21117
-
-# hbbr: relay server (puerto 21117 TCP, 21119 TCP WebSocket)
-pm2 start hbbr --name rustdesk-hbbr
-
+pm2 start "$BIN_DIR/hbbs" --name rustdesk-hbbs -- -r "${RELAY_HOST}:${RELAY_PORT}"
+pm2 start "$BIN_DIR/hbbr" --name rustdesk-hbbr
 pm2 save
-sudo env PATH="$PATH:/usr/bin" pm2 startup systemd -u "$(whoami)" --hp "$HOME" | tail -1 | bash || true
 
 echo ""
-echo "==> RustDesk server en ejecución con PM2"
-pm2 status
+pm2 status | grep -E "rustdesk|name" || pm2 status
 echo ""
-echo "Clave pública (copiar a custom_client_config si usas key):"
-if [ -f /var/lib/rustdesk/id_ed25519.pub ]; then
-  cat /var/lib/rustdesk/id_ed25519.pub
-else
-  echo "(se generará en el primer arranque de hbbs)"
+if [ -f "$DATA_DIR/id_ed25519.pub" ]; then
+  echo "Clave pública (añadir al cliente si se requiere):"
+  cat "$DATA_DIR/id_ed25519.pub"
 fi
 echo ""
-echo "Puertos a abrir en firewall:"
-echo "  21115/tcp, 21116/tcp+udp, 21117/tcp, 21118/tcp, 21119/tcp"
+echo "Puertos: 21115/tcp, 21116/tcp+udp, 21117/tcp, 21118/tcp, 21119/tcp"
