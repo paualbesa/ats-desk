@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/common/ats_design.dart';
+import 'package:flutter_hbb/models/platform_model.dart';
 
 /// Entrada animada con fade + slide (stagger opcional por índice).
 class AtsEntrance extends StatefulWidget {
