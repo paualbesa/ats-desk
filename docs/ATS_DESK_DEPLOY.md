@@ -250,6 +250,53 @@ Pasos:
 
 **No recomendado:** añadir Public Hostnames TCP en el túnel para 21116/21117. RustDesk usa **UDP** en 21116 y varios puertos; el túnel está pensado para SSH/HTTP, no para esto.
 
+### Starlink / sin IP pública (CGNAT)
+
+Si el «servidor» está en una red **Starlink** (sin IP pública), **no puedes** usar un registro DNS **A** al VPS: no hay IP fija en Internet hacia esa máquina.
+
+Tu setup actual tiene sentido para **SSH**:
+
+```
+server.albesa.tech  →  CNAME  →  cfargotunnel.com  →  cloudflared  →  PC Starlink
+```
+
+Eso **solo** expone lo configurado en el túnel (SSH). RustDesk **no** puede usar ese mismo camino de forma fiable:
+
+| Método | ¿Sirve para RustDesk? |
+|--------|------------------------|
+| CNAME al túnel Cloudflare | Solo SSH / HTTP; no TCP+UDP crudo en 21116 |
+| Public Hostname TCP en túnel | El **cliente** necesitaría `cloudflared` (no vale para ATS Desk normal) |
+| Registro A sin IP pública | Imposible |
+| **VPS barato con IP pública** | **Sí — recomendado** |
+
+#### Arquitectura recomendada (la más simple)
+
+```
+┌─────────────────────────────┐     ┌──────────────────────────────┐
+│  VPS ~3–5 €/mes             │     │  Oficina / Starlink (CGNAT)   │
+│  IP pública fija            │     │  Sin IP pública               │
+│  hbbs + hbbr (pm2 ats-desk) │     │  Solo clientes ATS Desk       │
+│  desk.albesa.tech → A → IP  │     │  server.albesa.tech → túnel   │
+└─────────────────────────────┘     │  (solo SSH, opcional)         │
+                                    └──────────────────────────────┘
+```
+
+1. Contratar un VPS pequeño (Hetzner, OVH, Oracle free tier, etc.) con **IP pública**.
+2. Instalar ahí `hbbs` + `hbbr` (`scripts/setup-rustdesk-pm2.sh`).
+3. DNS: `desk.albesa.tech` → **A** → IP del VPS (nube gris).
+4. `custom_client_config.json`:
+   ```json
+   "custom-rendezvous-server": "desk.albesa.tech:21116",
+   "relay-server": "desk.albesa.tech:21117"
+   ```
+5. Los PCs en Starlink **no alojan** el servidor; solo ejecutan ATS Desk como clientes.
+
+El servidor RustDesk pesa muy poco (decenas de MB RAM); no hace falta que esté en el mismo sitio que Starlink.
+
+#### Si insistes en alojar hbbs en el Starlink
+
+Necesitas un túnel que reenvíe **TCP y UDP** en los puertos 21115–21117 (Pangolin, `frp` hacia un VPS, etc.). **Cloudflare Tunnel no es adecuado** para clientes RustDesk estándar.
+
 ### Si aparece «Failed to connect to server…: Por favor intente mas tarde»
 
 1. **DNS:** `server.albesa.tech` debe resolver a la IP real del VPS (no a IPs de Cloudflare).
