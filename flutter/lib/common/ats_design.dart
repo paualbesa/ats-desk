@@ -45,7 +45,7 @@ class AtsDesign {
   static const double radiusXl = 24;
 
   /// Borde squircle estilo Apple (`ContinuousRectangleBorder`).
-  static ShapeBorder squircle({
+  static OutlinedBorder squircle({
     double radius = radiusMd,
     BorderSide side = BorderSide.none,
   }) =>

@@ -26,7 +26,7 @@ popd
 
 echo Generando bridge...
 cd /d "%ROOT%"
-flutter_rust_bridge_codegen --rust-input ./src/flutter_ffi.rs --dart-output ./flutter/lib/generated_bridge.dart --c-output ./flutter/macos/Runner/bridge_generated.h
+flutter_rust_bridge_codegen --rust-input ./src/flutter_ffi.rs --dart-output ./flutter/lib/generated_bridge.dart --c-output ./flutter/macos/Runner/bridge_generated.h --class-name Rustdesk
 if errorlevel 1 goto :fail
 
 echo build_runner...

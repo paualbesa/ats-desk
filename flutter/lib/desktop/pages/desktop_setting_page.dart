@@ -428,7 +428,7 @@ class _GeneralState extends State<_General> {
 
   Widget theme() {
     final current = MyTheme.getThemeModePreference().toShortString();
-    onChanged(String value) async {
+    void onChanged(String value) async {
       await MyTheme.changeDarkMode(MyTheme.themeModeFromString(value));
       setState(() {});
     }
@@ -1743,7 +1743,7 @@ class _DisplayState extends State<_Display> {
 
   Widget viewStyle(BuildContext context) {
     final isOptFixed = isOptionFixed(kOptionViewStyle);
-    onChanged(String value) async {
+    void onChanged(String value) async {
       await bind.mainSetUserDefaultOption(key: kOptionViewStyle, value: value);
       setState(() {});
     }
@@ -1765,7 +1765,7 @@ class _DisplayState extends State<_Display> {
 
   Widget scrollStyle(BuildContext context) {
     final isOptFixed = isOptionFixed(kOptionScrollStyle);
-    onChanged(String value) async {
+    void onChanged(String value) async {
       await bind.mainSetUserDefaultOption(
           key: kOptionScrollStyle, value: value);
       setState(() {});
@@ -1811,7 +1811,7 @@ class _DisplayState extends State<_Display> {
   }
 
   Widget imageQuality(BuildContext context) {
-    onChanged(String value) async {
+    void onChanged(String value) async {
       await bind.mainSetUserDefaultOption(
           key: kOptionImageQuality, value: value);
       setState(() {});
@@ -1868,7 +1868,7 @@ class _DisplayState extends State<_Display> {
   }
 
   Widget codec(BuildContext context) {
-    onChanged(String value) async {
+    void onChanged(String value) async {
       await bind.mainSetUserDefaultOption(
           key: kOptionCodecPreference, value: value);
       setState(() {});
@@ -1938,7 +1938,7 @@ class _DisplayState extends State<_Display> {
     }
 
     final key = 'privacy-mode-impl-key';
-    onChanged(String value) async {
+    void onChanged(String value) async {
       await bind.mainSetOption(key: key, value: value);
       setState(() {});
     }

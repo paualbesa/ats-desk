@@ -2,8 +2,8 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../common.dart';
-import '../ats_design.dart';
+import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/common/ats_design.dart';
 
 class Button extends StatefulWidget {
   final GestureTapCallback onTap;
@@ -41,7 +41,8 @@ class _ButtonState extends State<Button> {
   Widget build(BuildContext context) {
     final r = widget.radius ?? AtsDesign.radiusSm;
     return Obx(() => MouseRegion(
-          onHover: (value) => hover.value = value,
+          onEnter: (_) => hover.value = true,
+          onExit: (_) => hover.value = false,
           child: GestureDetector(
           onTapDown: (_) => pressed.value = true,
           onTapUp: (_) => pressed.value = false,
@@ -138,7 +139,8 @@ class _FixedWidthButtonState extends State<FixedWidthButton> {
   Widget build(BuildContext context) {
     final r = widget.radius ?? AtsDesign.radiusSm;
     return Obx(() => MouseRegion(
-          onHover: (v) => hover.value = v,
+          onEnter: (_) => hover.value = true,
+          onExit: (_) => hover.value = false,
           child: GestureDetector(
           onTapDown: (_) => pressed.value = true,
           onTapUp: (_) => pressed.value = false,

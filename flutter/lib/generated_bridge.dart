@@ -13864,3 +13864,7 @@ const int ERR_PEER_ON_FAILED = 40012;
 const int ERR_PEER_OFF_FAILED = 40012;
 
 const int INVALID_PRIVACY_MODE_CONN_ID = 0;
+
+// Compatibilidad con código que espera el nombre Rustdesk del bridge upstream.
+typedef RustdeskImpl = AlbesaMonitoring;
+typedef RustdeskImplImpl = AlbesaMonitoringImpl;

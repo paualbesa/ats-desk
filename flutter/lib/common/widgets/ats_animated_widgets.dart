@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
-import '../ats_design.dart';
-import '../common.dart';
+import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/common/ats_design.dart';
 
 /// Entrada animada con fade + slide (stagger opcional por índice).
 class AtsEntrance extends StatefulWidget {
@@ -107,7 +107,7 @@ class _AtsSquircleCardState extends State<AtsSquircleCard> {
             duration: AtsDesign.animNormal,
             curve: AtsDesign.animCurve,
             padding: widget.padding,
-            decoration: AtsDesign.cardDecoration(context, radius: widget.radius).copyWith(
+            decoration: AtsDesign.cardDecoration(context: context, radius: widget.radius).copyWith(
               border: Border.all(
                 color: _hovered
                     ? AtsDesign.accent.withOpacity(0.45)
