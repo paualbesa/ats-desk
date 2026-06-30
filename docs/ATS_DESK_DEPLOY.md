@@ -209,6 +209,47 @@ cat ~/rustdesk-data/id_ed25519.pub
 
 > **Nota:** Si `server.albesa.tech` está detrás de Cloudflare, los registros DNS deben estar en **solo DNS** (nube gris), no proxy naranja. RustDesk usa TCP/UDP en 21115–21119 y no funciona a través del proxy de Cloudflare.
 
+### Cloudflare Tunnel (`cfargotunnel.com`) — importante
+
+Si el registro DNS de `server` es un **CNAME** a `….cfargotunnel.com`, **no basta con poner nube gris**. Todo el tráfico pasa por el túnel de Cloudflare. El túnel solo expone lo que configuraste en **Public Hostnames** (normalmente solo SSH). Por eso:
+
+- `Test-NetConnection server.albesa.tech -Port 22` puede funcionar (SSH vía túnel).
+- `Test-NetConnection server.albesa.tech -Port 21116` falla (`TcpTestSucceeded: False`).
+- `nslookup` devuelve IPs de Cloudflare (`104.21.x.x`), no la IP del VPS.
+
+**Solución recomendada:** usar **dos nombres distintos**:
+
+| Subdominio | Tipo DNS | Destino | Uso |
+|------------|----------|---------|-----|
+| `server.albesa.tech` | CNAME | `….cfargotunnel.com` | SSH (como ahora) |
+| `desk.albesa.tech` | **A** | **IP pública real del VPS** | RustDesk (nube gris) |
+
+Pasos:
+
+1. Conectado por SSH al VPS, obtén la IP pública:
+   ```bash
+   curl -4 ifconfig.me
+   ```
+2. En Cloudflare → DNS → **Crear registro**:
+   - Tipo: **A**
+   - Nombre: `desk` (queda `desk.albesa.tech`)
+   - Contenido: la IP del paso 1
+   - Proxy: **Solo DNS (gris)**
+3. Abre puertos en el VPS y en el panel del proveedor: `21115–21119`.
+4. Actualiza `custom_client_config.json`:
+   ```json
+   "custom-rendezvous-server": "desk.albesa.tech:21116",
+   "relay-server": "desk.albesa.tech:21117"
+   ```
+5. Comprueba desde Windows:
+   ```powershell
+   nslookup desk.albesa.tech
+   Test-NetConnection desk.albesa.tech -Port 21116
+   ```
+   La IP debe ser la del VPS (no `104.21.x.x`) y `TcpTestSucceeded` debe ser `True`.
+
+**No recomendado:** añadir Public Hostnames TCP en el túnel para 21116/21117. RustDesk usa **UDP** en 21116 y varios puertos; el túnel está pensado para SSH/HTTP, no para esto.
+
 ### Si aparece «Failed to connect to server…: Por favor intente mas tarde»
 
 1. **DNS:** `server.albesa.tech` debe resolver a la IP real del VPS (no a IPs de Cloudflare).
