@@ -72,20 +72,22 @@ eas build --profile development --platform ios
 
 ## Build iOS (EAS)
 
+Proyecto Expo: [@albesatech/ats-desk-mobile](https://expo.dev/accounts/albesatech/projects/ats-desk-mobile)
+
 ```bash
 cd mobile-expo
 npx eas-cli login
-npx eas init          # vincula proyecto Expo
-npx eas build --platform ios --profile preview
+npx eas build --platform ios --profile development   # simulador / dev client
+npx eas build --platform ios --profile preview       # dispositivo físico (requiere credenciales Apple)
 ```
 
-Perfiles en `eas.json`:
+**Build iOS completado (development / dev client):**
 
-- **development** — dev client, simulador/dispositivo interno
-- **preview** — distribución interna (Ad Hoc / internal)
-- **production** — App Store / TestFlight
+- ID: `b583e92d-c511-4c0e-b44a-3d4be1beff4e`
+- Instalar: https://expo.dev/accounts/albesatech/projects/ats-desk-mobile/builds/b583e92d-c511-4c0e-b44a-3d4be1beff4e
+- Artefacto: https://expo.dev/artifacts/eas/zu8__eCUx6SqavNulUrPQkZ0YN4IeNLprOY0NWzIDMQ.tar.gz
 
-Credenciales Apple: configurar en [expo.dev](https://expo.dev) → proyecto → Credentials (no subir contraseñas al repo).
+Para **iPhone físico** (TestFlight / Ad Hoc), ejecuta `eas build --profile preview` tras configurar credenciales Apple en [expo.dev → Credentials](https://expo.dev/accounts/albesatech/projects/ats-desk-mobile/credentials). La cuenta albesatech ha agotado créditos gratuitos del periodo; puede requerir plan de pago para builds adicionales.
 
 ## Flujo de la app
 
