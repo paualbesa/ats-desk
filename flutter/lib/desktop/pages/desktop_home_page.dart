@@ -96,10 +96,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               if (!isIncomingOnly) Expanded(child: buildRightPane(context)),
             ],
           );
-        }),
+            }),
+          ),
+        ),
       ),
-    ),
-    ),
     );
   }
 
@@ -480,7 +480,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 ],
               ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -8,8 +8,8 @@ import 'package:path_provider/path_provider.dart';
 
 import '../ats_design.dart';
 import 'ats_animated_widgets.dart';
+import 'connection_status_indicator.dart';
 import '../../common.dart';
-import '../../models/operator_shared_list_model.dart';
 import '../../models/peer_model.dart';
 import '../../models/platform_model.dart';
 import '../../models/state_model.dart';
@@ -573,6 +573,7 @@ class _ConnectionGridCardState extends State<_ConnectionGridCard> {
             ),
           ),
         ),
+      ),
       ),
     );
   }
