@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
 # Arranca hbbs + hbbr como un único proceso supervisado por PM2 (nombre: ats-desk).
-set -uo pipefail
+set -euo pipefail
 
 BIN_DIR="${ATS_DESK_BIN_DIR:-${HOME}/bin}"
 DATA_DIR="${ATS_DESK_DATA_DIR:-${HOME}/rustdesk-data}"
-RELAY_HOST="${RELAY_HOST:-server.albesa.tech}"
+
+# Relay debe ser alcanzable por los clientes (IP pública o DNS directo, NO el túnel CF).
+if [[ -z "${RELAY_HOST:-}" || "${RELAY_HOST}" == "server.albesa.tech" ]]; then
+  RELAY_HOST="$(curl -4 -s --max-time 5 ifconfig.me || true)"
+fi
+RELAY_HOST="${RELAY_HOST:-127.0.0.1}"
 RELAY_PORT="${RELAY_PORT:-21117}"
 
 mkdir -p "$DATA_DIR"
@@ -36,7 +41,6 @@ echo "[ats-desk] Iniciando hbbr (relay)"
 "$HBBR" &
 HBBR_PID=$!
 
-# Si uno cae, salimos y PM2 reinicia el conjunto completo.
 wait -n "$HBBS_PID" "$HBBR_PID" 2>/dev/null || wait
 EXIT_CODE=$?
 echo "[ats-desk] Un proceso terminó (código $EXIT_CODE), reiniciando..."

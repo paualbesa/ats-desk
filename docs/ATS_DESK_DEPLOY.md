@@ -250,7 +250,32 @@ Pasos:
 
 **No recomendado:** añadir Public Hostnames TCP en el túnel para 21116/21117. RustDesk usa **UDP** en 21116 y varios puertos; el túnel está pensado para SSH/HTTP, no para esto.
 
-### Starlink / sin IP pública (CGNAT)
+### Starlink con IP pública (tu caso real)
+
+Aunque creas que no hay IP pública, el servidor puede tener una **IP saliente de Starlink** (ej. `169.155.235.85`). El problema no es Starlink en sí, sino el **DNS**:
+
+- `server.albesa.tech` → túnel Cloudflare → **solo SSH/HTTP**
+- Los clientes deben usar la **IP pública** o un subdominio **A** directo (nube gris)
+
+**Ya aplicado en el servidor:**
+- `hbbs -r 169.155.235.85:21117` (antes apuntaba al túnel → incorrecto)
+- Puertos 21115–21119 escuchando
+
+**Config cliente** (`custom_client_config.json` junto al exe):
+```json
+"custom-rendezvous-server": "169.155.235.85:21116",
+"relay-server": "169.155.235.85:21117",
+"key": "RoldVL1Npn0FLv274f1N6zlbWlhZKoOiYUvObjDLomo="
+```
+
+**Opcional (recomendado):** en Cloudflare DNS crea **A** `desk` → `169.155.235.85` (solo DNS, gris) y cambia el config a `desk.albesa.tech:21116`. Script:
+```bash
+CLOUDFLARE_API_TOKEN=xxx bash scripts/cloudflare-desk-dns.sh
+```
+
+**En el servidor:** `bash scripts/setup-rustdesk-public-endpoint.sh`
+
+### Starlink / sin IP pública (CGNAT puro)
 
 Si el «servidor» está en una red **Starlink** (sin IP pública), **no puedes** usar un registro DNS **A** al VPS: no hay IP fija en Internet hacia esa máquina.
 
