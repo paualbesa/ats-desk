@@ -75,8 +75,12 @@ def ensure_bridge() -> None:
 
 
 def copy_config(dest_dir: Path) -> None:
-    if CONFIG_SRC.exists():
-        shutil.copy(CONFIG_SRC, dest_dir / "custom_client_config.json")
+    if not CONFIG_SRC.exists():
+        return
+    dest = dest_dir / "custom_client_config.json"
+    if CONFIG_SRC.resolve() == dest.resolve():
+        return
+    shutil.copy(CONFIG_SRC, dest)
 
 
 def build_flutter(release: bool) -> Path:
