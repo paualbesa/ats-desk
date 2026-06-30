@@ -24,6 +24,7 @@ import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'common.dart';
+import 'common/ats_design.dart';
 import 'consts.dart';
 import 'mobile/pages/home_page.dart';
 import 'mobile/pages/server_page.dart';
@@ -369,14 +370,16 @@ void _runApp(
       title: title,
       theme: MyTheme.lightTheme.copyWith(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFFF9800),
+          seedColor: AtsDesign.accent,
           brightness: Brightness.light,
+          primary: AtsDesign.accent,
         ),
       ),
       darkTheme: MyTheme.darkTheme.copyWith(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFFF9800),
+          seedColor: AtsDesign.accent,
           brightness: Brightness.dark,
+          primary: AtsDesign.accent,
         ),
       ),
       themeMode: MyTheme.currentThemeMode(),
@@ -517,14 +520,16 @@ class _AppState extends State<App> with WidgetsBindingObserver {
               : bind.mainGetAppNameSync(),
           theme: MyTheme.lightTheme.copyWith(
             colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFFFF9800),
+              seedColor: AtsDesign.accent,
               brightness: Brightness.light,
+              primary: AtsDesign.accent,
             ),
           ),
           darkTheme: MyTheme.darkTheme.copyWith(
             colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFFFF9800),
+              seedColor: AtsDesign.accent,
               brightness: Brightness.dark,
+              primary: AtsDesign.accent,
             ),
           ),
           themeMode: MyTheme.currentThemeMode(),

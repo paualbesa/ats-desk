@@ -7,6 +7,7 @@ import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_hbb/common/ats_design.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common/formatter/id_formatter.dart';
 import 'package:flutter_hbb/desktop/widgets/refresh_wrapper.dart';
@@ -250,35 +251,34 @@ class ColorThemeExtension extends ThemeExtension<ColorThemeExtension> {
 class MyTheme {
   MyTheme._();
 
-  static const Color grayBg = Color(0xFFF0F0F0);
-  static const Color panelBg = Color(0xFFFFFFFF);
-  static const Color centerBg = Color(0xFFF5F5F5);
-  // ATS Desk naranja corporativo (paleta unificada estilo AnyDesk)
-  static const Color accent = Color(0xFFE8762E);
-  static const Color accentHover = Color(0xFFD96A24);
-  static const Color accent50 = Color(0x77E8762E);
-  static const Color accent80 = Color(0xAAE8762E);
+  static const Color grayBg = AtsDesign.lightBg;
+  static const Color panelBg = AtsDesign.lightPanel;
+  static const Color centerBg = AtsDesign.lightBg;
+  static const Color accent = AtsDesign.accent;
+  static const Color accentHover = AtsDesign.accentHover;
+  static const Color accent50 = AtsDesign.accent50;
+  static const Color accent80 = AtsDesign.accent80;
   static const Color canvasColor = Color(0xFF212121);
-  static const Color border = Color(0xFFE0E0E0);
-  static const Color idColor = Color(0xFFE8762E);
-  static const Color darkGray = Color.fromARGB(255, 148, 148, 148);
-  static const Color cmIdColor = Color(0xFFE8762E);
+  static const Color border = AtsDesign.lightBorder;
+  static const Color idColor = AtsDesign.accent;
+  static const Color darkGray = AtsDesign.lightTextSecondary;
+  static const Color cmIdColor = AtsDesign.accent;
   static const Color dark = Colors.black87;
-  static const Color button = Color(0xFFE8762E);
+  static const Color button = AtsDesign.accent;
   static const Color hoverBorder = Color(0xFF999999);
-  static const Color danger = Color(0xFFE53935);
-  static const Color statusOnline = Color(0xFF4CAF50);
-  static const Color statusConnecting = Color(0xFFFF9800);
-  static const Color statusOffline = Color(0xFFE53935);
-  static const Color statusReady = Color(0xFF26A69A);
+  static const Color danger = AtsDesign.danger;
+  static const Color statusOnline = AtsDesign.success;
+  static const Color statusConnecting = AtsDesign.warning;
+  static const Color statusOffline = AtsDesign.danger;
+  static const Color statusReady = AtsDesign.statusReady;
+
+  static const double _squircleSm = AtsDesign.radiusSm;
+  static const double _squircleMd = AtsDesign.radiusMd;
+  static const double _squircleLg = AtsDesign.radiusLg;
 
   // ListTile
-  static const ListTileThemeData listTileTheme = ListTileThemeData(
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.all(
-        Radius.circular(5),
-      ),
-    ),
+  static final ListTileThemeData listTileTheme = ListTileThemeData(
+    shape: AtsDesign.squircle(radius: _squircleSm),
   );
 
   static SwitchThemeData switchTheme() {
@@ -292,13 +292,9 @@ class MyTheme {
   }
 
   // Checkbox
-  static const CheckboxThemeData checkboxTheme = CheckboxThemeData(
+  static final CheckboxThemeData checkboxTheme = CheckboxThemeData(
     splashRadius: 0,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.all(
-        Radius.circular(5),
-      ),
-    ),
+    shape: AtsDesign.squircle(radius: AtsDesign.radiusXs),
   );
 
   // TextButton
@@ -310,9 +306,7 @@ class MyTheme {
   static TextButtonThemeData mobileTextButtonTheme = TextButtonThemeData(
     style: TextButton.styleFrom(
       padding: EdgeInsets.symmetric(horizontal: mobileTextButtonPaddingLR),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8.0),
-      ),
+      shape: AtsDesign.squircle(radius: _squircleMd),
     ),
   );
 
@@ -381,49 +375,45 @@ class MyTheme {
   );
 
   static ThemeData lightTheme = ThemeData(
-    // https://stackoverflow.com/questions/77537315/after-upgrading-to-flutter-3-16-the-app-bar-background-color-button-size-and
     useMaterial3: false,
     brightness: Brightness.light,
-    hoverColor: Color.fromARGB(255, 240, 240, 240),
-    scaffoldBackgroundColor: centerBg,
-    dialogBackgroundColor: Colors.white,
-    appBarTheme: AppBarTheme(
-      shadowColor: Colors.transparent,
-    ),
+    fontFamily: AtsDesign.fontFamily,
+    hoverColor: AtsDesign.accentSubtle,
+    scaffoldBackgroundColor: AtsDesign.lightBg,
+    dialogBackgroundColor: AtsDesign.lightPanel,
+    appBarTheme: const AppBarTheme(shadowColor: Colors.transparent),
     dialogTheme: DialogThemeData(
-      elevation: 15,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18.0),
-        side: BorderSide(
-          width: 1,
-          color: grayBg,
-        ),
+      elevation: 24,
+      shape: AtsDesign.squircle(
+        radius: _squircleLg,
+        side: const BorderSide(color: AtsDesign.lightBorder, width: 0.5),
       ),
     ),
     scrollbarTheme: scrollbarTheme,
     inputDecorationTheme: isDesktop
         ? InputDecorationTheme(
-            fillColor: grayBg,
+            fillColor: AtsDesign.lightSurface,
             filled: true,
             isDense: true,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: AtsDesign.borderRadius(_squircleSm),
+              borderSide: const BorderSide(color: AtsDesign.lightBorder),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: AtsDesign.borderRadius(_squircleSm),
+              borderSide: const BorderSide(color: AtsDesign.lightBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: AtsDesign.borderRadius(_squircleSm),
+              borderSide: const BorderSide(color: AtsDesign.accent, width: 1.5),
             ),
           )
         : null,
-    textTheme: const TextTheme(
-        titleLarge: TextStyle(fontSize: 19, color: Colors.black87),
-        titleSmall: TextStyle(fontSize: 14, color: Colors.black87),
-        bodySmall: TextStyle(fontSize: 12, color: Colors.black87, height: 1.25),
-        bodyMedium:
-            TextStyle(fontSize: 14, color: Colors.black87, height: 1.25),
-        labelLarge: TextStyle(fontSize: 16.0, color: MyTheme.accent80)),
-    cardColor: grayBg,
-    hintColor: Color(0xFFAAAAAA),
+    textTheme: AtsDesign.textTheme(Brightness.light),
+    cardColor: AtsDesign.lightSurface,
+    hintColor: AtsDesign.lightTextSecondary,
     visualDensity: VisualDensity.adaptivePlatformDensity,
-    tabBarTheme: const TabBarThemeData(
-      labelColor: Colors.black87,
-    ),
+    tabBarTheme: const TabBarThemeData(labelColor: AtsDesign.lightText),
     tooltipTheme: tooltipTheme(),
     splashColor: (isDesktop || isWebDesktop) ? Colors.transparent : null,
     highlightColor: (isDesktop || isWebDesktop) ? Colors.transparent : null,
@@ -432,28 +422,25 @@ class MyTheme {
         ? TextButtonThemeData(
             style: TextButton.styleFrom(
               splashFactory: NoSplash.splashFactory,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18.0),
-              ),
+              shape: AtsDesign.squircle(radius: _squircleMd),
             ),
           )
         : mobileTextButtonTheme,
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: MyTheme.accent,
+        backgroundColor: accent,
         foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8.0),
-        ),
+        elevation: 2,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        shape: AtsDesign.squircle(radius: _squircleSm),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        backgroundColor: grayBg,
-        foregroundColor: Colors.black87,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8.0),
-        ),
+        backgroundColor: AtsDesign.lightSurface,
+        foregroundColor: AtsDesign.lightText,
+        side: const BorderSide(color: AtsDesign.lightBorder),
+        shape: AtsDesign.squircle(radius: _squircleSm),
       ),
     ),
     switchTheme: switchTheme(),
@@ -461,21 +448,18 @@ class MyTheme {
     checkboxTheme: checkboxTheme,
     listTileTheme: listTileTheme,
     menuBarTheme: MenuBarThemeData(
-        style:
-            MenuStyle(backgroundColor: MaterialStatePropertyAll(Colors.white))),
-    colorScheme: ColorScheme.light(
+        style: MenuStyle(
+            backgroundColor: MaterialStatePropertyAll(AtsDesign.lightPanel))),
+    colorScheme: const ColorScheme.light(
         primary: accent,
         secondary: accent,
-        background: panelBg,
-        surface: panelBg),
+        background: AtsDesign.lightPanel,
+        surface: AtsDesign.lightSurface),
     popupMenuTheme: PopupMenuThemeData(
-        color: Colors.white,
-        shape: RoundedRectangleBorder(
-          side: BorderSide(
-              color: (isDesktop || isWebDesktop)
-                  ? Color(0xFFECECEC)
-                  : Colors.transparent),
-          borderRadius: BorderRadius.all(Radius.circular(8.0)),
+        color: AtsDesign.lightPanel,
+        shape: AtsDesign.squircle(
+          radius: _squircleSm,
+          side: const BorderSide(color: AtsDesign.lightBorder),
         )),
   ).copyWith(
     extensions: <ThemeExtension<dynamic>>[
@@ -486,49 +470,43 @@ class MyTheme {
   static ThemeData darkTheme = ThemeData(
     useMaterial3: false,
     brightness: Brightness.dark,
-    hoverColor: Color.fromARGB(255, 45, 46, 53),
-    scaffoldBackgroundColor: Color(0xFF18191E),
-    dialogBackgroundColor: Color(0xFF18191E),
-    appBarTheme: AppBarTheme(
-      shadowColor: Colors.transparent,
-    ),
+    fontFamily: AtsDesign.fontFamily,
+    hoverColor: AtsDesign.accentSubtle,
+    scaffoldBackgroundColor: AtsDesign.darkBg,
+    dialogBackgroundColor: AtsDesign.darkPanel,
+    appBarTheme: const AppBarTheme(shadowColor: Colors.transparent),
     dialogTheme: DialogThemeData(
-      elevation: 15,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18.0),
-        side: BorderSide(
-          width: 1,
-          color: Color(0xFF24252B),
-        ),
+      elevation: 24,
+      shape: AtsDesign.squircle(
+        radius: _squircleLg,
+        side: const BorderSide(color: AtsDesign.darkBorder, width: 0.5),
       ),
     ),
     scrollbarTheme: scrollbarThemeDark,
     inputDecorationTheme: (isDesktop || isWebDesktop)
         ? InputDecorationTheme(
-            fillColor: Color(0xFF24252B),
+            fillColor: AtsDesign.darkSurface,
             filled: true,
             isDense: true,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: AtsDesign.borderRadius(_squircleSm),
+              borderSide: const BorderSide(color: AtsDesign.darkBorder),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: AtsDesign.borderRadius(_squircleSm),
+              borderSide: const BorderSide(color: AtsDesign.darkBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: AtsDesign.borderRadius(_squircleSm),
+              borderSide: const BorderSide(color: AtsDesign.accent, width: 1.5),
             ),
           )
         : null,
-    textTheme: const TextTheme(
-      titleLarge: TextStyle(fontSize: 19),
-      titleSmall: TextStyle(fontSize: 14),
-      bodySmall: TextStyle(fontSize: 12, height: 1.25),
-      bodyMedium: TextStyle(fontSize: 14, height: 1.25),
-      labelLarge: TextStyle(
-        fontSize: 16.0,
-        fontWeight: FontWeight.bold,
-        color: accent80,
-      ),
-    ),
-    cardColor: Color(0xFF24252B),
+    textTheme: AtsDesign.textTheme(Brightness.dark),
+    cardColor: AtsDesign.darkSurface,
+    hintColor: AtsDesign.darkTextSecondary,
     visualDensity: VisualDensity.adaptivePlatformDensity,
-    tabBarTheme: const TabBarThemeData(
-      labelColor: Colors.white70,
-    ),
+    tabBarTheme: const TabBarThemeData(labelColor: AtsDesign.darkText),
     tooltipTheme: tooltipTheme(),
     splashColor: (isDesktop || isWebDesktop) ? Colors.transparent : null,
     highlightColor: (isDesktop || isWebDesktop) ? Colors.transparent : null,
@@ -537,34 +515,30 @@ class MyTheme {
         ? TextButtonThemeData(
             style: TextButton.styleFrom(
               splashFactory: NoSplash.splashFactory,
-              disabledForegroundColor: Colors.white70,
-              foregroundColor: Colors.white70,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18.0),
-              ),
+              disabledForegroundColor: AtsDesign.darkTextSecondary,
+              foregroundColor: AtsDesign.darkText,
+              shape: AtsDesign.squircle(radius: _squircleMd),
             ),
           )
         : mobileTextButtonTheme,
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: MyTheme.accent,
+        backgroundColor: accent,
         foregroundColor: Colors.white,
-        disabledForegroundColor: Colors.white70,
+        disabledForegroundColor: AtsDesign.darkTextSecondary,
         disabledBackgroundColor: Colors.white10,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8.0),
-        ),
+        elevation: 2,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        shape: AtsDesign.squircle(radius: _squircleSm),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        backgroundColor: Color(0xFF24252B),
-        side: BorderSide(color: Colors.white12, width: 0.5),
-        disabledForegroundColor: Colors.white70,
-        foregroundColor: Colors.white70,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8.0),
-        ),
+        backgroundColor: AtsDesign.darkSurface,
+        side: const BorderSide(color: AtsDesign.darkBorder, width: 0.5),
+        disabledForegroundColor: AtsDesign.darkTextSecondary,
+        foregroundColor: AtsDesign.darkText,
+        shape: AtsDesign.squircle(radius: _squircleSm),
       ),
     ),
     switchTheme: switchTheme(),
@@ -573,16 +547,17 @@ class MyTheme {
     listTileTheme: listTileTheme,
     menuBarTheme: MenuBarThemeData(
         style: MenuStyle(
-            backgroundColor: MaterialStatePropertyAll(Color(0xFF121212)))),
-    colorScheme: ColorScheme.dark(
+            backgroundColor: MaterialStatePropertyAll(AtsDesign.darkPanel))),
+    colorScheme: const ColorScheme.dark(
       primary: accent,
       secondary: accent,
-      background: Color(0xFF24252B),
+      background: AtsDesign.darkPanel,
+      surface: AtsDesign.darkSurface,
     ),
     popupMenuTheme: PopupMenuThemeData(
-        shape: RoundedRectangleBorder(
-      side: BorderSide(color: Colors.white24),
-      borderRadius: BorderRadius.all(Radius.circular(8.0)),
+        shape: AtsDesign.squircle(
+      radius: _squircleSm,
+      side: const BorderSide(color: AtsDesign.darkBorder),
     )),
   ).copyWith(
     extensions: <ThemeExtension<dynamic>>[

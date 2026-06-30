@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
-import 'dart:ui' show FontFeature;
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/common/ats_design.dart';
+import 'package:flutter_hbb/common/widgets/ats_animated_widgets.dart';
 import 'package:flutter_hbb/common/widgets/animated_rotation_widget.dart';
 import 'package:flutter_hbb/common/widgets/peer_card.dart';
 import 'package:flutter_hbb/common/widgets/custom_password.dart';
@@ -37,7 +38,9 @@ class DesktopHomePage extends StatefulWidget {
   State<DesktopHomePage> createState() => _DesktopHomePageState();
 }
 
-const borderColor = Color(0xFFE8762E);
+class _NewConnectionIntent extends Intent {
+  const _NewConnectionIntent();
+}
 
 class _DesktopHomePageState extends State<DesktopHomePage>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
@@ -64,8 +67,26 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   Widget build(BuildContext context) {
     super.build(context);
     final isIncomingOnly = bind.isIncomingOnly();
-    return _buildBlock(
-        child: Obx(() {
+    return Shortcuts(
+      shortcuts: {
+        LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyN):
+            const _NewConnectionIntent(),
+      },
+      child: Actions(
+        actions: {
+          _NewConnectionIntent: CallbackAction<_NewConnectionIntent>(
+            onInvoke: (_) {
+              if (!bind.isOutgoingOnly()) {
+                _showNewConnectionDialog(context);
+              }
+              return null;
+            },
+          ),
+        },
+        child: Focus(
+          autofocus: true,
+          child: _buildBlock(
+            child: Obx(() {
           final isFullscreen = stateGlobal.fullscreen.isTrue;
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -76,6 +97,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             ],
           );
         }),
+      ),
+    ),
+    ),
     );
   }
 
@@ -102,18 +126,41 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 if (!isOutgoingOnly) buildPresetPasswordWarning(),
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-                  child: Align(
-                    alignment: Alignment.center,
-                    child: _buildDesktopLogoRow(context),
+                  child: AtsEntrance(
+                    index: 0,
+                    child: Row(
+                      children: [
+                        Expanded(child: Align(
+                          alignment: Alignment.center,
+                          child: _buildDesktopLogoRow(context),
+                        )),
+                        const AtsThemeToggle(),
+                      ],
+                    ),
                   ),
                 ),
-                if (!isOutgoingOnly) buildIDBoard(context),
-                if (!isOutgoingOnly) buildPasswordBoard(context),
-                if (!isOutgoingOnly) _buildNewConnectionButton(context),
                 if (!isOutgoingOnly)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                    child: OnlineStatusWidget(),
+                  AtsEntrance(
+                    index: 1,
+                    child: buildIDBoard(context),
+                  ),
+                if (!isOutgoingOnly)
+                  AtsEntrance(
+                    index: 2,
+                    child: buildPasswordBoard(context),
+                  ),
+                if (!isOutgoingOnly)
+                  AtsEntrance(
+                    index: 3,
+                    child: _buildNewConnectionButton(context),
+                  ),
+                if (!isOutgoingOnly)
+                  AtsEntrance(
+                    index: 4,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                      child: OnlineStatusWidget(),
+                    ),
                   ),
                 const Divider(height: 1),
                 Expanded(
@@ -176,7 +223,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         ClipRRect(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: AtsDesign.borderRadius(AtsDesign.radiusSm),
           child: Image.asset(
             'assets/ATSDESKiconfill1080.png',
             fit: BoxFit.contain,
@@ -209,79 +256,74 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 
   buildIDBoard(BuildContext context) {
     final model = gFFI.serverModel;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? Theme.of(context).cardColor
-            : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: MyTheme.border.withOpacity(0.8)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      translate("ID"),
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context)
-                            .textTheme
-                            .titleLarge
-                            ?.color
-                            ?.withOpacity(0.5),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+      child: AtsSquircleCard(
+        radius: AtsDesign.radiusMd,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        translate("ID"),
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AtsDesign.accent,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      buildPopupMenu(context),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  GestureDetector(
+                    onDoubleTap: () {
+                      Clipboard.setData(ClipboardData(text: model.serverId.text));
+                      showToast(translate("Copied"));
+                    },
+                    child: Text(
+                      model.serverId.text,
+                      style: AtsDesign.monoStyle(
+                        brightness: Theme.of(context).brightness,
+                        fontSize: 24,
+                        weight: FontWeight.w600,
+                        color: AtsDesign.accent,
                       ),
                     ),
-                    buildPopupMenu(context),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                GestureDetector(
-                  onDoubleTap: () {
+                  ),
+                ],
+              ),
+            ),
+            Tooltip(
+              message: translate("Copy"),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  customBorder: AtsDesign.squircle(radius: AtsDesign.radiusXs),
+                  onTap: () {
                     Clipboard.setData(ClipboardData(text: model.serverId.text));
                     showToast(translate("Copied"));
                   },
-                  child: Text(
-                    model.serverId.text,
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1.5,
-                      color: MyTheme.idColor,
-                      fontFeatures: const [FontFeature.tabularFigures()],
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: ShapeDecoration(
+                      color: AtsDesign.accentSubtle,
+                      shape: AtsDesign.squircle(radius: AtsDesign.radiusXs),
                     ),
+                    child: const Icon(Icons.copy_rounded, color: AtsDesign.accent, size: 18),
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
-          IconButton(
-            tooltip: translate("Copy"),
-            icon: Icon(Icons.copy_outlined, color: MyTheme.accent, size: 20),
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: model.serverId.text));
-              showToast(translate("Copied"));
-            },
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -337,70 +379,54 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final textColor = Theme.of(context).textTheme.titleLarge?.color;
     final showOneTime = model.approveMode != 'click' &&
         model.verificationMethod != kUsePermanentPassword;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? Theme.of(context).cardColor
-            : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: MyTheme.border.withOpacity(0.8)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AutoSizeText(
-                  translate("Password"),
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: textColor?.withOpacity(0.5),
-                  ),
-                  maxLines: 1,
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onDoubleTap: () {
-                          if (showOneTime) {
-                            Clipboard.setData(
-                                ClipboardData(text: model.serverPasswd.text));
-                            showToast(translate("Copied"));
-                          }
-                        },
-                        child: TextFormField(
-                          controller: model.serverPasswd,
-                          readOnly: true,
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            isDense: true,
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: 2,
-                            color: textColor,
-                          ),
-                        ).workaroundFreezeLinuxMint(),
-                      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      child: AtsSquircleCard(
+        radius: AtsDesign.radiusMd,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AutoSizeText(
+                    translate("Password"),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Theme.of(context).hintColor,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.6,
                     ),
+                    maxLines: 1,
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onDoubleTap: () {
+                            if (showOneTime) {
+                              Clipboard.setData(
+                                  ClipboardData(text: model.serverPasswd.text));
+                              showToast(translate("Copied"));
+                            }
+                          },
+                          child: TextFormField(
+                            controller: model.serverPasswd,
+                            readOnly: true,
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            style: AtsDesign.monoStyle(
+                              brightness: Theme.of(context).brightness,
+                              fontSize: 17,
+                            ),
+                          ).workaroundFreezeLinuxMint(),
+                        ),
+                      ),
                       if (showOneTime)
                         AnimatedRotationWidget(
                           onPressed: () => bind.mainUpdateTemporaryPassword(),
@@ -462,22 +488,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   Widget _buildNewConnectionButton(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: SizedBox(
-        width: double.infinity,
-        height: 44,
-        child: ElevatedButton.icon(
-          onPressed: () => _showNewConnectionDialog(context),
-          icon: const Icon(Icons.add_link_rounded, size: 20),
-          label: Text(localeName.startsWith('es') ? 'Nueva conexión' : 'New connection'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: MyTheme.accent,
-            foregroundColor: Colors.white,
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        ),
+      child: AtsPrimaryButton(
+        expanded: true,
+        icon: Icons.add_link_rounded,
+        label: localeName.startsWith('es') ? 'Nueva conexión' : 'New connection',
+        onPressed: () => _showNewConnectionDialog(context),
       ),
     );
   }
@@ -490,6 +505,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
+        shape: AtsDesign.squircle(radius: AtsDesign.radiusLg),
         title: Text(localeName.startsWith('es') ? 'Nueva conexión' : 'New connection'),
         content: SizedBox(
           width: 320,

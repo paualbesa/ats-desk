@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../common.dart';
+import '../ats_design.dart';
 
 class Button extends StatefulWidget {
   final GestureTapCallback onTap;
@@ -38,49 +39,64 @@ class _ButtonState extends State<Button> {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() => InkWell(
+    final r = widget.radius ?? AtsDesign.radiusSm;
+    return Obx(() => MouseRegion(
+          onHover: (value) => hover.value = value,
+          child: GestureDetector(
           onTapDown: (_) => pressed.value = true,
           onTapUp: (_) => pressed.value = false,
           onTapCancel: () => pressed.value = false,
-          onHover: (value) => hover.value = value,
           onTap: widget.onTap,
-          child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minWidth: widget.minWidth ?? 70.0,
-              ),
-              child: Container(
-                padding: EdgeInsets.all(widget.padding ?? 4.5),
+          child: AnimatedScale(
+            scale: pressed.value ? 0.96 : (hover.value ? 1.03 : 1.0),
+            duration: AtsDesign.animFast,
+            curve: AtsDesign.animCurve,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minWidth: widget.minWidth ?? 70.0),
+              child: AnimatedContainer(
+                duration: AtsDesign.animNormal,
+                padding: EdgeInsets.all(widget.padding ?? 6),
                 alignment: Alignment.center,
-                decoration: BoxDecoration(
+                decoration: ShapeDecoration(
                   color: pressed.value
-                      ? MyTheme.accent
+                      ? AtsDesign.accentDark
                       : (widget.isOutline
                           ? Colors.transparent
-                          : MyTheme.button),
-                  border: Border.all(
-                    color: pressed.value
-                        ? MyTheme.accent
-                        : hover.value
-                            ? MyTheme.hoverBorder
-                            : (widget.isOutline
-                                ? widget.borderColor ?? MyTheme.border
-                                : MyTheme.button),
+                          : (hover.value ? AtsDesign.accentHover : MyTheme.button)),
+                  shape: AtsDesign.squircle(
+                    radius: r,
+                    side: BorderSide(
+                      color: widget.isOutline
+                          ? (hover.value ? AtsDesign.accent : (widget.borderColor ?? MyTheme.border))
+                          : Colors.transparent,
+                      width: widget.isOutline ? 1.2 : 0,
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(widget.radius ?? 5),
+                  shadows: widget.isOutline
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: AtsDesign.accent.withOpacity(hover.value ? 0.35 : 0.2),
+                            blurRadius: hover.value ? 12 : 6,
+                            offset: Offset(0, hover.value ? 4 : 2),
+                          ),
+                        ],
                 ),
                 child: Text(
-                  translate(
-                    widget.text,
-                  ),
+                  translate(widget.text),
                   style: TextStyle(
-                      fontSize: widget.textSize ?? 12.0,
-                      color: widget.isOutline
-                          ? widget.textColor ??
-                              Theme.of(context).textTheme.titleLarge?.color
-                          : Colors.white),
+                    fontFamily: AtsDesign.fontFamily,
+                    fontSize: widget.textSize ?? 13.0,
+                    fontWeight: FontWeight.w600,
+                    color: widget.isOutline
+                        ? widget.textColor ?? AtsDesign.accent
+                        : Colors.white,
+                  ),
                 ).marginSymmetric(horizontal: 12),
-              )),
-        ));
+              ),
+            ),
+          ),
+        )));
   }
 }
 
@@ -120,52 +136,44 @@ class _FixedWidthButtonState extends State<FixedWidthButton> {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() => InkWell(
+    final r = widget.radius ?? AtsDesign.radiusSm;
+    return Obx(() => MouseRegion(
+          onHover: (v) => hover.value = v,
+          child: GestureDetector(
           onTapDown: (_) => pressed.value = true,
           onTapUp: (_) => pressed.value = false,
           onTapCancel: () => pressed.value = false,
-          onHover: (value) => hover.value = value,
           onTap: widget.onTap,
-          child: Container(
-            width: widget.width,
-            padding: EdgeInsets.all(widget.padding ?? 4.5),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: pressed.value
-                  ? MyTheme.accent
-                  : (widget.isOutline ? Colors.transparent : MyTheme.button),
-              border: Border.all(
+          child: AnimatedScale(
+            scale: pressed.value ? 0.96 : 1.0,
+            duration: AtsDesign.animFast,
+            child: AnimatedContainer(
+              duration: AtsDesign.animNormal,
+              width: widget.width,
+              padding: EdgeInsets.all(widget.padding ?? 6),
+              alignment: Alignment.center,
+              decoration: ShapeDecoration(
                 color: pressed.value
-                    ? MyTheme.accent
-                    : hover.value
-                        ? MyTheme.hoverBorder
-                        : (widget.isOutline
-                            ? widget.borderColor ?? MyTheme.border
-                            : MyTheme.button),
+                    ? AtsDesign.accentDark
+                    : (widget.isOutline ? Colors.transparent : MyTheme.button),
+                shape: AtsDesign.squircle(radius: r),
               ),
-              borderRadius: BorderRadius.circular(widget.radius ?? 5),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Flexible(
-                  child: AutoSizeText(
-                    translate(
-                      widget.text,
-                    ),
-                    maxLines: widget.maxLines ?? 1,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontSize: widget.textSize ?? 12.0,
-                        color: widget.isOutline
-                            ? widget.textColor ??
-                                Theme.of(context).textTheme.titleLarge?.color
-                            : Colors.white),
-                  ).marginSymmetric(horizontal: 12),
+              child: AutoSizeText(
+                translate(widget.text),
+                maxLines: widget.maxLines ?? 1,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: AtsDesign.fontFamily,
+                  fontSize: widget.textSize ?? 13.0,
+                  fontWeight: FontWeight.w600,
+                  color: widget.isOutline
+                      ? widget.textColor ??
+                          Theme.of(context).textTheme.titleLarge?.color
+                      : Colors.white,
                 ),
-              ],
+              ).marginSymmetric(horizontal: 12),
             ),
           ),
-        ));
+        )));
   }
 }

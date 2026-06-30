@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_hbb/common/ats_design.dart';
+import 'package:flutter_hbb/common/widgets/ats_animated_widgets.dart';
 import 'package:flutter_hbb/common/widgets/connection_status_indicator.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/common/widgets/peer_card.dart';
@@ -302,42 +304,11 @@ class _AddressRow extends StatelessWidget {
     final displayName = entry.name.isEmpty ? entry.id : entry.name;
     return Obx(() {
       final color = _addressStatusColor(entry);
-      return Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => connectInPeerTab(context, peer, PeerTabIndex.ab),
-          onSecondaryTapDown: (details) => _showContextMenu(context, details.globalPosition),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            child: Row(
-              children: [
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: color.withOpacity(0.5),
-                        blurRadius: 4,
-                        spreadRadius: 0,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    displayName,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+      return _AnimatedPeerRow(
+        onTap: () => connectInPeerTab(context, peer, PeerTabIndex.ab),
+        onSecondaryTapDown: (details) => _showContextMenu(context, details.globalPosition),
+        statusColor: color,
+        label: displayName,
       );
     });
   }
@@ -478,43 +449,83 @@ class _PeerRow extends StatelessWidget {
     final displayName = peer.alias.isEmpty ? peer.id : peer.alias;
     return Obx(() {
       final color = _peerStatusColor(peer);
-      return Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => connectInPeerTab(context, peer, tab),
-          onSecondaryTapDown: (details) => _showContextMenu(context, details.globalPosition),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            child: Row(
-              children: [
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: color.withOpacity(0.5),
-                        blurRadius: 4,
-                        spreadRadius: 0,
+      return _AnimatedPeerRow(
+        onTap: () => connectInPeerTab(context, peer, tab),
+        onSecondaryTapDown: (details) => _showContextMenu(context, details.globalPosition),
+        statusColor: color,
+        label: displayName,
+      );
+    });
+  }
+}
+
+/// Fila de peer con hover animado y squircle sutil.
+class _AnimatedPeerRow extends StatefulWidget {
+  final VoidCallback onTap;
+  final void Function(TapDownDetails)? onSecondaryTapDown;
+  final Color statusColor;
+  final String label;
+
+  const _AnimatedPeerRow({
+    required this.onTap,
+    this.onSecondaryTapDown,
+    required this.statusColor,
+    required this.label,
+  });
+
+  @override
+  State<_AnimatedPeerRow> createState() => _AnimatedPeerRowState();
+}
+
+class _AnimatedPeerRowState extends State<_AnimatedPeerRow> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: AtsDesign.animNormal,
+        curve: AtsDesign.animCurve,
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: ShapeDecoration(
+          color: _hovered ? AtsDesign.accentSubtle : Colors.transparent,
+          shape: AtsDesign.squircle(radius: AtsDesign.radiusXs),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            customBorder: AtsDesign.squircle(radius: AtsDesign.radiusXs),
+            onTap: widget.onTap,
+            onSecondaryTapDown: widget.onSecondaryTapDown,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: Row(
+                children: [
+                  ConnectionStatusDot(color: widget.statusColor, size: 10),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: AnimatedDefaultTextStyle(
+                      duration: AtsDesign.animFast,
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                        fontWeight: _hovered ? FontWeight.w600 : FontWeight.w500,
+                        color: _hovered ? AtsDesign.accent : null,
                       ),
-                    ],
+                      child: Text(widget.label, overflow: TextOverflow.ellipsis),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    displayName,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium,
+                  AnimatedOpacity(
+                    duration: AtsDesign.animFast,
+                    opacity: _hovered ? 1 : 0,
+                    child: const Icon(Icons.chevron_right_rounded, size: 16, color: AtsDesign.accent),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
-      );
-    });
+      ),
+    );
   }
 }

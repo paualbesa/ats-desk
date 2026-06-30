@@ -11,6 +11,8 @@ import 'package:get/get.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:flutter_hbb/models/peer_model.dart';
 
+import 'package:flutter_hbb/common/ats_design.dart';
+import 'package:flutter_hbb/common/widgets/ats_animated_widgets.dart';
 import '../../common.dart';
 import '../../common/formatter/id_formatter.dart';
 import '../../common/widgets/peer_tab_page.dart';
@@ -72,19 +74,30 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
     basicWidget() => Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Container(
-              height: 8,
-              width: 8,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(4),
-                color: _svcStopped.value ||
-                        stateGlobal.svcStatus.value == SvcStatus.connecting
-                    ? MyTheme.statusConnecting
-                    : (stateGlobal.svcStatus.value == SvcStatus.ready
-                        ? MyTheme.statusReady
-                        : MyTheme.statusOffline),
-              ),
-            ).marginSymmetric(horizontal: em),
+            Obx(() {
+              final connecting = stateGlobal.svcStatus.value == SvcStatus.connecting;
+              final ready = !_svcStopped.value && stateGlobal.svcStatus.value == SvcStatus.ready;
+              final color = _svcStopped.value || stateGlobal.svcStatus.value == SvcStatus.notReady
+                  ? MyTheme.statusOffline
+                  : (connecting
+                      ? MyTheme.statusConnecting
+                      : MyTheme.statusReady);
+              if (connecting) {
+                return AtsPulseDot(color: color, size: 8);
+              }
+              return AnimatedContainer(
+                duration: AtsDesign.animNormal,
+                height: 8,
+                width: 8,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(4),
+                  color: color,
+                  boxShadow: ready
+                      ? [BoxShadow(color: color.withOpacity(0.6), blurRadius: 6)]
+                      : null,
+                ),
+              );
+            }).marginSymmetric(horizontal: em),
             Container(
               width: isIncomingOnly ? 226 : null,
               child: _buildConnStatusMsg(),
@@ -312,25 +325,36 @@ class _ConnectionPageState extends State<ConnectionPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: _buildRemoteIDTextField(context)),
-              const SizedBox(width: 12),
-              Padding(
-                padding: const EdgeInsets.only(top: 24),
-                child: OnlineStatusWidget(),
-              ),
-            ],
+        AtsEntrance(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(child: _buildRemoteIDTextField(context)),
+                const SizedBox(width: 12),
+                AtsPrimaryButton(
+                  label: translate('Connect'),
+                  icon: Icons.arrow_forward_rounded,
+                  onPressed: () => onConnect(),
+                ),
+                const SizedBox(width: 8),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: OnlineStatusWidget(),
+                ),
+              ],
+            ),
           ),
         ),
-        _buildGridToolbar(context),
+        AtsEntrance(index: 1, child: _buildGridToolbar(context)),
         Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(left: 12.0),
-            child: RecentConnectionsCenterView(),
+          child: AtsEntrance(
+            index: 2,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 12.0),
+              child: RecentConnectionsCenterView(),
+            ),
           ),
         ),
       ],
@@ -352,38 +376,53 @@ class _ConnectionPageState extends State<ConnectionPage>
           ),
           const SizedBox(width: 10),
           ...sizes.map((size) {
-            return Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: Obx(() {
-                final selected = gridMultiConnectionSize.value == size;
-                return Material(
-                  color: selected
-                      ? Theme.of(context).colorScheme.primaryContainer
-                      : Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.circular(8),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: () async {
-                      gridMultiConnectionSize.value = size;
-                      await bind.setLocalFlutterOption(
-                        k: 'grid_multi_connection_size',
-                        v: size.toString(),
-                      );
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      child: Text(
-                        '$size',
-                        style: TextStyle(
-                          fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                          fontSize: 13,
+                return Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: Obx(() {
+                    final selected = gridMultiConnectionSize.value == size;
+                    return AnimatedContainer(
+                      duration: AtsDesign.animNormal,
+                      curve: AtsDesign.animCurve,
+                      decoration: ShapeDecoration(
+                        color: selected
+                            ? AtsDesign.accent.withOpacity(0.15)
+                            : Theme.of(context).cardColor,
+                        shape: AtsDesign.squircle(
+                          radius: AtsDesign.radiusXs,
+                          side: BorderSide(
+                            color: selected ? AtsDesign.accent : Colors.transparent,
+                            width: 1.2,
+                          ),
                         ),
                       ),
-                    ),
-                  ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          customBorder: AtsDesign.squircle(radius: AtsDesign.radiusXs),
+                          onTap: () async {
+                            gridMultiConnectionSize.value = size;
+                            await bind.setLocalFlutterOption(
+                              k: 'grid_multi_connection_size',
+                              v: size.toString(),
+                            );
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            child: AnimatedDefaultTextStyle(
+                              duration: AtsDesign.animFast,
+                              style: TextStyle(
+                                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                                fontSize: 13,
+                                color: selected ? AtsDesign.accent : null,
+                              ),
+                              child: Text('$size'),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
                 );
-              }),
-            );
           }),
           const Spacer(),
         ],
@@ -405,198 +444,19 @@ class _ConnectionPageState extends State<ConnectionPage>
   }
 
   /// UI for the remote ID TextField.
-  /// Search for a peer.
   Widget _buildRemoteIDTextField(BuildContext context) {
-    var w = Container(
-      width: 320 + 20 * 2,
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
-      decoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(13)),
-          border: Border.all(color: Theme.of(context).colorScheme.background)),
-      child: Ink(
-        child: Column(
-          children: [
-            getConnectionPageTitle(context, false).marginOnly(bottom: 15),
-            Row(
-              children: [
-                Expanded(
-                    child: RawAutocomplete<Peer>(
-                  optionsBuilder: (TextEditingValue textEditingValue) {
-                    if (textEditingValue.text == '') {
-                      _autocompleteOpts = const Iterable<Peer>.empty();
-                    } else if (_allPeersLoader.peers.isEmpty &&
-                        !_allPeersLoader.isPeersLoaded) {
-                      Peer emptyPeer = Peer(
-                        id: '',
-                        username: '',
-                        hostname: '',
-                        alias: '',
-                        platform: '',
-                        tags: [],
-                        hash: '',
-                        password: '',
-                        forceAlwaysRelay: false,
-                        rdpPort: '',
-                        rdpUsername: '',
-                        loginName: '',
-                        device_group_name: '',
-                        note: '',
-                      );
-                      _autocompleteOpts = [emptyPeer];
-                    } else {
-                      String textWithoutSpaces =
-                          textEditingValue.text.replaceAll(" ", "");
-                      if (int.tryParse(textWithoutSpaces) != null) {
-                        textEditingValue = TextEditingValue(
-                          text: textWithoutSpaces,
-                          selection: textEditingValue.selection,
-                        );
-                      }
-                      String textToFind = textEditingValue.text.toLowerCase();
-                      _autocompleteOpts = _allPeersLoader.peers
-                          .where((peer) =>
-                              peer.id.toLowerCase().contains(textToFind) ||
-                              peer.username
-                                  .toLowerCase()
-                                  .contains(textToFind) ||
-                              peer.hostname
-                                  .toLowerCase()
-                                  .contains(textToFind) ||
-                              peer.alias.toLowerCase().contains(textToFind))
-                          .toList();
-                    }
-                    return _autocompleteOpts;
-                  },
-                  focusNode: _idFocusNode,
-                  textEditingController: _idEditingController,
-                  fieldViewBuilder: (
-                    BuildContext context,
-                    TextEditingController fieldTextEditingController,
-                    FocusNode fieldFocusNode,
-                    VoidCallback onFieldSubmitted,
-                  ) {
-                    updateTextAndPreserveSelection(
-                        fieldTextEditingController, _idController.text);
-                    return Obx(() => TextField(
-                          autocorrect: false,
-                          enableSuggestions: false,
-                          keyboardType: TextInputType.visiblePassword,
-                          focusNode: fieldFocusNode,
-                          style: const TextStyle(
-                            fontFamily: 'WorkSans',
-                            fontSize: 22,
-                            height: 1.4,
-                          ),
-                          maxLines: 1,
-                          cursorColor:
-                              Theme.of(context).textTheme.titleLarge?.color,
-                          decoration: InputDecoration(
-                              filled: false,
-                              counterText: '',
-                              hintText: _idInputFocused.value
-                                  ? null
-                                  : translate('ID'),
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 15, vertical: 13)),
-                          controller: fieldTextEditingController,
-                          inputFormatters: [IDTextInputFormatter()],
-                          onChanged: (v) {
-                            _idController.id = v;
-                          },
-                          onSubmitted: (_) {
-                            onConnect();
-                          },
-                        ).workaroundFreezeLinuxMint());
-                  },
-                  onSelected: (option) {
-                    setState(() {
-                      _idController.id = option.id;
-                      FocusScope.of(context).unfocus();
-                    });
-                  },
-                  optionsViewBuilder: (BuildContext context,
-                      AutocompleteOnSelected<Peer> onSelected,
-                      Iterable<Peer> options) {
-                    options = _autocompleteOpts;
-                    double maxHeight = options.length * 50;
-                    if (options.length == 1) {
-                      maxHeight = 52;
-                    } else if (options.length == 3) {
-                      maxHeight = 146;
-                    } else if (options.length == 4) {
-                      maxHeight = 193;
-                    }
-                    maxHeight = maxHeight.clamp(0, 200);
-
-                    return Align(
-                      alignment: Alignment.topLeft,
-                      child: Container(
-                          decoration: BoxDecoration(
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
-                                blurRadius: 5,
-                                spreadRadius: 1,
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                              borderRadius: BorderRadius.circular(5),
-                              child: Material(
-                                elevation: 4,
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    maxHeight: maxHeight,
-                                    maxWidth: 319,
-                                  ),
-                                  child: _allPeersLoader.peers.isEmpty &&
-                                          !_allPeersLoader.isPeersLoaded
-                                      ? Container(
-                                          height: 80,
-                                          child: Center(
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
-                                          ))
-                                      : Padding(
-                                          padding:
-                                              const EdgeInsets.only(top: 5),
-                                          child: ListView(
-                                            children: options
-                                                .map((peer) =>
-                                                    AutocompletePeerTile(
-                                                        onSelect: () =>
-                                                            onSelected(peer),
-                                                        peer: peer))
-                                                .toList(),
-                                          ),
-                                        ),
-                                ),
-                              ))),
-                    );
-                  },
-                )),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 13.0),
-              child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                SizedBox(
-                  height: 28.0,
-                  child: _AnimatedConnectButton(
-                    onPressed: () {
-                      onConnect();
-                    },
-                    label: translate("Connect"),
-                  ),
-                ),
-              ]),
-            ),
-          ],
-        ),
+    return AtsSquircleField(
+      controller: _idEditingController,
+      focusNode: _idFocusNode,
+      hintText: translate('ID'),
+      monospace: true,
+      onChanged: (v) => _idController.id = v,
+      onSubmitted: onConnect,
+      suffix: IconButton(
+        icon: const Icon(Icons.search_rounded, size: 20),
+        color: AtsDesign.accent,
+        onPressed: onConnect,
       ),
     );
-    return Container(
-        constraints: const BoxConstraints(maxWidth: 600), child: w);
   }
 }

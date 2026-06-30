@@ -6,8 +6,9 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../ats_design.dart';
+import 'ats_animated_widgets.dart';
 import '../../common.dart';
-import 'connection_status_indicator.dart';
 import '../../models/operator_shared_list_model.dart';
 import '../../models/peer_model.dart';
 import '../../models/platform_model.dart';
@@ -194,19 +195,23 @@ class _RecentConnectionsCenterViewState extends State<RecentConnectionsCenterVie
                 hintText: localeName.startsWith('es')
                     ? 'Buscar conexiones...'
                     : 'Search connections...',
-                prefixIcon: const Icon(Icons.search, size: 20),
+                prefixIcon: const Icon(Icons.search_rounded, size: 20, color: AtsDesign.accent),
                 isDense: true,
                 filled: true,
                 fillColor: theme.brightness == Brightness.dark
-                    ? theme.cardColor
-                    : Colors.white,
+                    ? AtsDesign.darkSurface
+                    : AtsDesign.lightSurface,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.5)),
+                  borderRadius: AtsDesign.borderRadius(AtsDesign.radiusSm),
+                  borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.4)),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.4)),
+                  borderRadius: AtsDesign.borderRadius(AtsDesign.radiusSm),
+                  borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.35)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: AtsDesign.borderRadius(AtsDesign.radiusSm),
+                  borderSide: const BorderSide(color: AtsDesign.accent, width: 1.5),
                 ),
               ),
             ),
@@ -231,7 +236,10 @@ class _RecentConnectionsCenterViewState extends State<RecentConnectionsCenterVie
             cacheExtent: 400,
             itemCount: peers.length,
             itemBuilder: (context, index) {
-              return _ConnectionGridCard(peer: peers[index]);
+              return AtsEntrance(
+                index: index,
+                child: _ConnectionGridCard(peer: peers[index]),
+              );
             },
           );
         },
@@ -356,35 +364,31 @@ class _ConnectionGridCardState extends State<_ConnectionGridCard> {
       onExit: (_) => setState(() => _hovered = false),
       child: AnimatedScale(
         scale: _hovered ? 1.02 : 1.0,
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        child: Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => connect(context, peer.id),
-        borderRadius: BorderRadius.circular(12),
+        duration: AtsDesign.animNormal,
+        curve: AtsDesign.animCurve,
         child: Semantics(
           button: true,
           label: '$displayName, ${peer.id}',
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
+          child: Material(
+            color: theme.brightness == Brightness.dark
+                ? AtsDesign.darkSurface
+                : AtsDesign.lightSurface,
+            elevation: _hovered ? 8 : 3,
+            shadowColor: Colors.black.withOpacity(0.25),
+            shape: AtsDesign.squircle(
+              radius: AtsDesign.radiusMd,
+              side: BorderSide(
                 color: _hovered
-                    ? MyTheme.accent.withOpacity(0.5)
-                    : theme.dividerColor.withOpacity(0.5),
+                    ? AtsDesign.accent.withOpacity(0.55)
+                    : (theme.brightness == Brightness.dark
+                        ? AtsDesign.darkBorder
+                        : AtsDesign.lightBorder),
+                width: _hovered ? 1.2 : 0.5,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(_hovered ? 0.18 : 0.10),
-                  blurRadius: _hovered ? 14 : 8,
-                  offset: Offset(0, _hovered ? 4 : 2),
-                ),
-              ],
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              customBorder: AtsDesign.squircle(radius: AtsDesign.radiusMd),
+              onTap: () => connect(context, peer.id),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -524,15 +528,11 @@ class _ConnectionGridCardState extends State<_ConnectionGridCard> {
                           const SizedBox(height: 2),
                           Text(
                             peer.id,
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.98),
-                              fontSize: 13,
-                              height: 1.2,
-                              shadows: const [
-                                Shadow(color: Colors.black87, blurRadius: 1, offset: Offset(0, 1)),
-                                Shadow(color: Colors.black54, blurRadius: 2, offset: Offset(0, 1)),
-                              ],
-                            ),
+                            style: AtsDesign.monoStyle(
+                        brightness: theme.brightness,
+                        fontSize: 13,
+                        color: Colors.white.withOpacity(0.95),
+                      ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -573,8 +573,6 @@ class _ConnectionGridCardState extends State<_ConnectionGridCard> {
             ),
           ),
         ),
-      ),
-      ),
       ),
     );
   }
