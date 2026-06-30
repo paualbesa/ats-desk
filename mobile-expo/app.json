@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "ATS Desk",
+    "slug": "ats-desk-mobile",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/images/icon.png",
+    "scheme": "atsdesk",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "tech.albesa.atsdesk",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "ATS Desk usa la cámara para escanear códigos QR de conexión.",
+        "NSMicrophoneUsageDescription": "ATS Desk puede usar el micrófono en sesiones remotas con audio.",
+        "UIBackgroundModes": [
+          "audio",
+          "fetch"
+        ]
+      }
+    },
+    "android": {
+      "package": "tech.albesa.atsdesk",
+      "adaptiveIcon": {
+        "backgroundColor": "#0D0D0F",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-dev-client",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#0D0D0F"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "owner": "albesatech",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d5b6519d-73ec-483f-b448-cad30b76c0bd"
+      }
+    }
+  }
+}
