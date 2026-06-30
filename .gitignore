@@ -17,6 +17,11 @@ cert.pfx
 *svg
 *jpg
 sciter.dll
+flutter_windows.dll
+librustdesk.dll
+*_plugin.dll
+icudtl.dat
+/data/
 **pdb
 src/bridge_generated.rs
 src/bridge_generated.io.rs

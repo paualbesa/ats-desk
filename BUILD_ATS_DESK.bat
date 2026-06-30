@@ -24,6 +24,6 @@ if errorlevel 1 (
 )
 
 echo.
-echo Listo! Ejecuta ATS-Desk.exe desde esta carpeta.
+echo Listo! Ejecuta ATS-Desk.exe desde esta carpeta (junto a las DLL y data/).
 pause
 endlocal

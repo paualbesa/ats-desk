@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Build ATS Desk y copia el ejecutable a la raíz del proyecto para pruebas rápidas.
+Build ATS Desk y despliega el bundle completo para ejecutar en la raíz del proyecto.
 
 Uso:
   python3 build_ats_desk.py --release --flutter
 
-Resultado en la raíz:
-  Windows: ATS-Desk.exe + custom_client_config.json
+Resultado en la raíz (Windows):
+  ATS-Desk.exe + *.dll (plugins, flutter_windows, librustdesk) + data/ + custom_client_config.json
 """
 from __future__ import annotations
 
@@ -83,6 +83,33 @@ def copy_config(dest_dir: Path) -> None:
     shutil.copy(CONFIG_SRC, dest)
 
 
+def deploy_windows_bundle(bundle: Path, dest_dir: Path, out_exe_name: str) -> Path:
+    """Copia DLLs, assets y datos de Flutter junto al ejecutable."""
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    src_exe = bundle / "rustdesk.exe"
+    if not src_exe.exists():
+        src_exe = bundle / "ats_desk.exe"
+    if not src_exe.exists():
+        print(f"ERROR: No se encontró el ejecutable en {bundle}")
+        sys.exit(1)
+
+    for item in bundle.iterdir():
+        if item.is_file() and item.suffix.lower() == ".exe":
+            continue
+        dest = dest_dir / item.name
+        if item.is_dir():
+            if dest.exists():
+                shutil.rmtree(dest)
+            shutil.copytree(item, dest)
+        else:
+            shutil.copy2(item, dest)
+
+    dest_exe = dest_dir / out_exe_name
+    shutil.copy2(src_exe, dest_exe)
+    return dest_exe
+
+
 def build_flutter(release: bool) -> Path:
     mode = "release" if release else "debug"
     flags = "--features flutter --lib" + (" --release" if release else "")
@@ -117,14 +144,11 @@ def main() -> None:
     if args.flutter:
         bundle = build_flutter(args.release)
         if is_win:
-            src_exe = bundle / "rustdesk.exe"
-            if not src_exe.exists():
-                src_exe = bundle / "ats_desk.exe"
-            dest = ROOT / out_name
-            shutil.copy2(src_exe, dest)
+            dest = deploy_windows_bundle(bundle, ROOT, out_name)
             copy_config(bundle)
             copy_config(ROOT)
             print(f"\n✓ Listo: {dest}")
+            print("  (incluye DLLs de plugins y carpeta data/ en la raíz)")
         elif platform.system() == "Linux":
             shutil.copy2(bundle / "rustdesk", ROOT / out_name)
             os.chmod(ROOT / out_name, 0o755)

@@ -167,6 +167,7 @@ python3 build_ats_desk.py --release --flutter
 
 El script genera en la **raíz del proyecto**:
 - `ATS-Desk.exe` (Windows) o `ATS-Desk` (Linux)
+- En Windows también copia las DLL de plugins, `flutter_windows.dll`, `librustdesk.dll` y la carpeta `data/` (necesarios para ejecutar)
 - Copia `custom_client_config.json` junto al ejecutable
 
 Requisitos Windows: Rust con feature `flutter`, Flutter SDK, Visual Studio Build Tools.
