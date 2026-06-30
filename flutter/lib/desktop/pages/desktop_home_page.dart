@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
+import 'dart:ui' show FontFeature;
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
@@ -36,7 +37,7 @@ class DesktopHomePage extends StatefulWidget {
   State<DesktopHomePage> createState() => _DesktopHomePageState();
 }
 
-const borderColor = Color(0xFF2F65BA);
+const borderColor = Color(0xFFE8762E);
 
 class _DesktopHomePageState extends State<DesktopHomePage>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
@@ -90,8 +91,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     return ChangeNotifierProvider.value(
       value: gFFI.serverModel,
       child: Container(
-        width: isIncomingOnly ? 280.0 : 260.0,
-        color: Theme.of(context).colorScheme.background,
+        width: isIncomingOnly ? 280.0 : 280.0,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).colorScheme.background
+            : MyTheme.panelBg,
         child: Stack(
           children: [
             Column(
@@ -107,6 +110,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 if (!isOutgoingOnly) buildIDBoard(context),
                 if (!isOutgoingOnly) buildPasswordBoard(context),
                 if (!isOutgoingOnly) _buildNewConnectionButton(context),
+                if (!isOutgoingOnly)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                    child: OnlineStatusWidget(),
+                  ),
                 const Divider(height: 1),
                 Expanded(
                   child: SingleChildScrollView(
@@ -204,66 +212,74 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
-      margin: const EdgeInsets.only(left: 20, right: 11),
-      height: 57,
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).cardColor
+            : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MyTheme.border.withOpacity(0.8)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: 2,
-            decoration: const BoxDecoration(color: MyTheme.accent),
-          ).marginOnly(top: 5),
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 7),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    height: 25,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          translate("ID"),
-                          style: TextStyle(
-                              fontSize: 14,
-                              color: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.color
-                                  ?.withOpacity(0.5)),
-                        ).marginOnly(top: 5),
-                        buildPopupMenu(context)
-                      ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      translate("ID"),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context)
+                            .textTheme
+                            .titleLarge
+                            ?.color
+                            ?.withOpacity(0.5),
+                      ),
+                    ),
+                    buildPopupMenu(context),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                GestureDetector(
+                  onDoubleTap: () {
+                    Clipboard.setData(ClipboardData(text: model.serverId.text));
+                    showToast(translate("Copied"));
+                  },
+                  child: Text(
+                    model.serverId.text,
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.5,
+                      color: MyTheme.idColor,
+                      fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
-                  Flexible(
-                    child: GestureDetector(
-                      onDoubleTap: () {
-                        Clipboard.setData(
-                            ClipboardData(text: model.serverId.text));
-                        showToast(translate("Copied"));
-                      },
-                      child: TextFormField(
-                        controller: model.serverId,
-                        readOnly: true,
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.only(top: 10, bottom: 10),
-                        ),
-                        style: TextStyle(
-                          fontSize: 22,
-                        ),
-                      ).workaroundFreezeLinuxMint(),
-                    ),
-                  )
-                ],
-              ),
+                ),
+              ],
             ),
+          ),
+          IconButton(
+            tooltip: translate("Copy"),
+            icon: Icon(Icons.copy_outlined, color: MyTheme.accent, size: 20),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: model.serverId.text));
+              showToast(translate("Copied"));
+            },
           ),
         ],
       ),
@@ -324,52 +340,67 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
-      margin: EdgeInsets.only(left: 20.0, right: 16, top: 13, bottom: 13),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: 2,
-            height: 52,
-            decoration: BoxDecoration(color: MyTheme.accent),
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).cardColor
+            : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MyTheme.border.withOpacity(0.8)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 7),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AutoSizeText(
-                    translate("Password"),
-                    style: TextStyle(
-                        fontSize: 14, color: textColor?.withOpacity(0.5)),
-                    maxLines: 1,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AutoSizeText(
+                  translate("Password"),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: textColor?.withOpacity(0.5),
                   ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onDoubleTap: () {
-                            if (showOneTime) {
-                              Clipboard.setData(
-                                  ClipboardData(text: model.serverPasswd.text));
-                              showToast(translate("Copied"));
-                            }
-                          },
-                          child: TextFormField(
-                            controller: model.serverPasswd,
-                            readOnly: true,
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              contentPadding:
-                                  EdgeInsets.only(top: 14, bottom: 10),
-                            ),
-                            style: TextStyle(fontSize: 15),
-                          ).workaroundFreezeLinuxMint(),
-                        ),
+                  maxLines: 1,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onDoubleTap: () {
+                          if (showOneTime) {
+                            Clipboard.setData(
+                                ClipboardData(text: model.serverPasswd.text));
+                            showToast(translate("Copied"));
+                          }
+                        },
+                        child: TextFormField(
+                          controller: model.serverPasswd,
+                          readOnly: true,
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 2,
+                            color: textColor,
+                          ),
+                        ).workaroundFreezeLinuxMint(),
                       ),
+                    ),
                       if (showOneTime)
                         AnimatedRotationWidget(
                           onPressed: () => bind.mainUpdateTemporaryPassword(),
@@ -423,30 +454,29 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 ],
               ),
             ),
-          ),
         ],
       ),
     );
   }
 
-  static const Color _newConnectionOrange = Color(0xFFE8762E);
-
   Widget _buildNewConnectionButton(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: SizedBox(
         width: double.infinity,
-        child: ElevatedButton(
+        height: 44,
+        child: ElevatedButton.icon(
           onPressed: () => _showNewConnectionDialog(context),
+          icon: const Icon(Icons.add_link_rounded, size: 20),
+          label: Text(localeName.startsWith('es') ? 'Nueva conexión' : 'New connection'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: _newConnectionOrange,
+            backgroundColor: MyTheme.accent,
             foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 12),
+            elevation: 2,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(10),
             ),
           ),
-          child: const Text('Nueva conexión'),
         ),
       ),
     );
@@ -460,7 +490,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Nueva conexión'),
+        title: Text(localeName.startsWith('es') ? 'Nueva conexión' : 'New connection'),
         content: SizedBox(
           width: 320,
           child: Column(
@@ -514,11 +544,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               if (parentContext.mounted) showToast(translate('Successful'));
             },
             style: OutlinedButton.styleFrom(
-              foregroundColor: _newConnectionOrange,
-              side: const BorderSide(color: _newConnectionOrange, width: 2),
+              foregroundColor: MyTheme.accent,
+              side: BorderSide(color: MyTheme.accent, width: 2),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             ),
-            child: const Text('Añadir a Direcciones'),
+            child: Text(localeName.startsWith('es') ? 'Añadir a Direcciones' : 'Add to address book'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -531,11 +561,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   forceOpenInTabs: peerCardUiType.value == PeerUiType.grid);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: _newConnectionOrange,
+              backgroundColor: MyTheme.accent,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             ),
-            child: const Text('Conectarse'),
+            child: Text(localeName.startsWith('es') ? 'Conectarse' : 'Connect'),
           ),
         ],
       ),

@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../common.dart';
+import 'connection_status_indicator.dart';
 import '../../models/operator_shared_list_model.dart';
 import '../../models/peer_model.dart';
 import '../../models/platform_model.dart';
@@ -31,6 +32,8 @@ class RecentConnectionsCenterView extends StatefulWidget {
 class _RecentConnectionsCenterViewState extends State<RecentConnectionsCenterView> {
   DateTime? _lastThumbnailSync;
   Timer? _thumbnailSyncTimer;
+  String _searchQuery = '';
+  final _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -62,6 +65,7 @@ class _RecentConnectionsCenterViewState extends State<RecentConnectionsCenterVie
   @override
   void dispose() {
     _thumbnailSyncTimer?.cancel();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -123,30 +127,51 @@ class _RecentConnectionsCenterViewState extends State<RecentConnectionsCenterVie
     return list;
   }
 
+  List<Peer> _filteredPeers(List<Peer> peers) {
+    final q = _searchQuery.trim().toLowerCase();
+    if (q.isEmpty) return peers;
+    return peers.where((p) {
+      return p.id.toLowerCase().contains(q) ||
+          p.alias.toLowerCase().contains(q) ||
+          p.hostname.toLowerCase().contains(q);
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Obx(() {
       stateGlobal.favoriteIds.length;
-      final peers = _mergedPeers();
+      final peers = _filteredPeers(_mergedPeers());
       if (peers.isEmpty) {
+        final hasAny = _mergedPeers().isNotEmpty;
         return Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.desktop_windows_outlined, size: 64, color: theme.hintColor),
+              Icon(
+                hasAny ? Icons.search_off_outlined : Icons.desktop_windows_outlined,
+                size: 64,
+                color: theme.hintColor,
+              ),
               const SizedBox(height: 16),
               Text(
-                localeName.startsWith('es')
-                    ? 'Sin conexiones recientes'
-                    : 'No recent connections',
+                hasAny
+                    ? (localeName.startsWith('es') ? 'Sin resultados' : 'No matches')
+                    : (localeName.startsWith('es')
+                        ? 'Sin conexiones recientes'
+                        : 'No recent connections'),
                 style: theme.textTheme.titleMedium?.copyWith(color: theme.hintColor),
               ),
               const SizedBox(height: 8),
               Text(
-                localeName.startsWith('es')
-                    ? 'Conecta desde el panel izquierdo o escribe un ID'
-                    : 'Connect from the left panel or enter an ID',
+                hasAny
+                    ? (localeName.startsWith('es')
+                        ? 'Prueba con otro término de búsqueda'
+                        : 'Try a different search term')
+                    : (localeName.startsWith('es')
+                        ? 'Conecta desde el panel izquierdo o escribe un ID'
+                        : 'Connect from the left panel or enter an ID'),
                 style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
                 textAlign: TextAlign.center,
               ),
@@ -157,7 +182,37 @@ class _RecentConnectionsCenterViewState extends State<RecentConnectionsCenterVie
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _syncThumbnailsFromDiskIfNeeded(peers);
       });
-      return LayoutBuilder(
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (v) => setState(() => _searchQuery = v),
+              decoration: InputDecoration(
+                hintText: localeName.startsWith('es')
+                    ? 'Buscar conexiones...'
+                    : 'Search connections...',
+                prefixIcon: const Icon(Icons.search, size: 20),
+                isDense: true,
+                filled: true,
+                fillColor: theme.brightness == Brightness.dark
+                    ? theme.cardColor
+                    : Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.5)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.4)),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: LayoutBuilder(
         builder: (context, constraints) {
           final width = constraints.maxWidth;
           final crossAxisCount = (width / _kGridCellMinWidth).floor().clamp(1, 6);
@@ -180,6 +235,9 @@ class _RecentConnectionsCenterViewState extends State<RecentConnectionsCenterVie
             },
           );
         },
+            ),
+          ),
+        ],
       );
     });
   }
@@ -187,10 +245,16 @@ class _RecentConnectionsCenterViewState extends State<RecentConnectionsCenterVie
 
 /// Color del indicador de estado de conexión por peer id.
 Color _connectionStatusColor(String peerId) {
-  if (stateGlobal.connectingPeerIds.contains(peerId)) return Colors.orange;
-  if (stateGlobal.connectedPeerIds.contains(peerId)) return Colors.green;
-  if (stateGlobal.addressListOnlineStates[peerId] == true) return Colors.green;
-  return Colors.red;
+  if (stateGlobal.connectingPeerIds.contains(peerId)) {
+    return MyTheme.statusConnecting;
+  }
+  if (stateGlobal.connectedPeerIds.contains(peerId)) {
+    return MyTheme.statusOnline;
+  }
+  if (stateGlobal.addressListOnlineStates[peerId] == true) {
+    return MyTheme.statusOnline;
+  }
+  return MyTheme.statusOffline;
 }
 
 /// Texto del tooltip de estado (Conectando / Conectado / Desconectado).
@@ -204,10 +268,19 @@ String _connectionStatusTooltip(String peerId) {
   return localeName.startsWith('es') ? 'Desconectado' : 'Offline';
 }
 
-class _ConnectionGridCard extends StatelessWidget {
+class _ConnectionGridCard extends StatefulWidget {
   final Peer peer;
 
   const _ConnectionGridCard({Key? key, required this.peer}) : super(key: key);
+
+  @override
+  State<_ConnectionGridCard> createState() => _ConnectionGridCardState();
+}
+
+class _ConnectionGridCardState extends State<_ConnectionGridCard> {
+  bool _hovered = false;
+
+  Peer get peer => widget.peer;
 
   Future<void> _toggleFavorite() async {
     final favs = List<String>.from(stateGlobal.favoriteIds);
@@ -278,7 +351,14 @@ class _ConnectionGridCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final displayName = peer.getId();
-    return Material(
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedScale(
+        scale: _hovered ? 1.02 : 1.0,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        child: Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: () => connect(context, peer.id),
@@ -286,15 +366,20 @@ class _ConnectionGridCard extends StatelessWidget {
         child: Semantics(
           button: true,
           label: '$displayName, ${peer.id}',
-          child: Container(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: theme.dividerColor.withOpacity(0.5)),
+              border: Border.all(
+                color: _hovered
+                    ? MyTheme.accent.withOpacity(0.5)
+                    : theme.dividerColor.withOpacity(0.5),
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.12),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+                  color: Colors.black.withOpacity(_hovered ? 0.18 : 0.10),
+                  blurRadius: _hovered ? 14 : 8,
+                  offset: Offset(0, _hovered ? 4 : 2),
                 ),
               ],
             ),
@@ -362,25 +447,10 @@ class _ConnectionGridCard extends StatelessWidget {
                   left: 10,
                   child: Obx(() {
                     final color = _connectionStatusColor(peer.id);
-                    final isOffline = color == Colors.red;
-                    return Tooltip(
-                      message: _connectionStatusTooltip(peer.id),
-                      child: Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          color: color,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 1.5),
-                          boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
-                        ),
-                        child: isOffline
-                            ? CustomPaint(
-                                painter: _OfflineLinePainter(),
-                                size: const Size(14, 14),
-                              )
-                            : null,
-                      ),
+                    return ConnectionStatusDot(
+                      color: color,
+                      size: 14,
+                      tooltip: _connectionStatusTooltip(peer.id),
                     );
                   }),
                 ),
@@ -505,21 +575,7 @@ class _ConnectionGridCard extends StatelessWidget {
         ),
       ),
       ),
+      ),
     );
   }
-}
-
-/// Dibuja la raya diagonal de "desconectado" dentro del círculo.
-class _OfflineLinePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
-    canvas.drawLine(Offset(2, 2), Offset(size.width - 2, size.height - 2), paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

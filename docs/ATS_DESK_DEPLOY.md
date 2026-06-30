@@ -144,3 +144,60 @@ Cuando tengáis el servidor en la oficina:
 | Nombre de la app y “Powered by” | `app-name` y `hide-powered-by-me` en el mismo JSON. |
 | Fijar acceso/aprobación/contraseña | Claves de seguridad en `override-settings` (nombres en `config.rs`). |
 | Ruta del config | Archivo `custom_client_config.json` junto al exe o variable de entorno `ATS_DESK_CONFIG`. |
+
+---
+
+## 7. Build rápido para pruebas (ATS-Desk.exe en la raíz)
+
+Para probar sin buscar el ejecutable en carpetas de build:
+
+**Windows (recomendado):**
+```bat
+BUILD_ATS_DESK.bat
+```
+O manualmente:
+```bat
+python build_ats_desk.py --release --flutter
+```
+
+**Linux / macOS:**
+```bash
+python3 build_ats_desk.py --release --flutter
+```
+
+El script genera en la **raíz del proyecto**:
+- `ATS-Desk.exe` (Windows) o `ATS-Desk` (Linux)
+- Copia `custom_client_config.json` junto al ejecutable
+
+Requisitos Windows: Rust con feature `flutter`, Flutter SDK, Visual Studio Build Tools.
+
+---
+
+## 8. Servidor RustDesk con PM2 (Ubuntu)
+
+Script incluido: `scripts/setup-rustdesk-pm2.sh`
+
+En el servidor Ubuntu (acceso SSH directo, sin proxy Cloudflare en el puerto 22):
+
+```bash
+scp scripts/setup-rustdesk-pm2.sh ats-server@server.albesa.tech:~/
+ssh ats-server@server.albesa.tech
+bash setup-rustdesk-pm2.sh
+```
+
+El script instala Node.js, PM2, RustDesk server (hbbs + hbbr) y los deja corriendo siempre.
+
+**Puertos a abrir:** 21115/tcp, 21116/tcp+udp, 21117/tcp, 21118/tcp, 21119/tcp
+
+**Config del cliente** (`custom_client_config.json`):
+```json
+{
+  "app-name": "ATS Desk",
+  "override-settings": {
+    "custom-rendezvous-server": "server.albesa.tech:21116",
+    "relay-server": "server.albesa.tech:21117"
+  }
+}
+```
+
+> **Nota:** Si `server.albesa.tech` está detrás de Cloudflare, SSH y los puertos RustDesk deben apuntar a la IP real del servidor (registros DNS «solo DNS» / grey cloud), no al proxy naranja.

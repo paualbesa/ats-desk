@@ -79,10 +79,10 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
                 borderRadius: BorderRadius.circular(4),
                 color: _svcStopped.value ||
                         stateGlobal.svcStatus.value == SvcStatus.connecting
-                    ? kColorWarn
+                    ? MyTheme.statusConnecting
                     : (stateGlobal.svcStatus.value == SvcStatus.ready
-                        ? Color.fromARGB(255, 50, 190, 166)
-                        : Color.fromARGB(255, 224, 79, 95)),
+                        ? MyTheme.statusReady
+                        : MyTheme.statusOffline),
               ),
             ).marginSymmetric(horizontal: em),
             Container(
@@ -312,6 +312,21 @@ class _ConnectionPageState extends State<ConnectionPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _buildRemoteIDTextField(context)),
+              const SizedBox(width: 12),
+              Padding(
+                padding: const EdgeInsets.only(top: 24),
+                child: OnlineStatusWidget(),
+              ),
+            ],
+          ),
+        ),
+        _buildGridToolbar(context),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.only(left: 12.0),

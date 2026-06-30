@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_hbb/common/widgets/connection_status_indicator.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/common/widgets/peer_card.dart';
 import 'package:flutter_hbb/models/ab_model.dart';
@@ -16,18 +17,28 @@ import '../../models/platform_model.dart';
 
 /// Indicador de estado: naranja = conectando, verde = conectado/online, rojo = sin conexión.
 Color _peerStatusColor(Peer peer) {
-  if (stateGlobal.connectingPeerIds.contains(peer.id)) return Colors.orange;
-  if (stateGlobal.connectedPeerIds.contains(peer.id)) return Colors.green;
-  if (peer.online) return Colors.green;
-  return Colors.red;
+  if (stateGlobal.connectingPeerIds.contains(peer.id)) {
+    return MyTheme.statusConnecting;
+  }
+  if (stateGlobal.connectedPeerIds.contains(peer.id)) {
+    return MyTheme.statusOnline;
+  }
+  if (peer.online) return MyTheme.statusOnline;
+  return MyTheme.statusOffline;
 }
 
 /// Indicador para filas de Direcciones (usan addressListOnlineStates + connected).
 Color _addressStatusColor(OperatorSharedEntry entry) {
-  if (stateGlobal.connectingPeerIds.contains(entry.id)) return Colors.orange;
-  if (stateGlobal.connectedPeerIds.contains(entry.id)) return Colors.green;
-  if (stateGlobal.addressListOnlineStates[entry.id] == true) return Colors.green;
-  return Colors.red;
+  if (stateGlobal.connectingPeerIds.contains(entry.id)) {
+    return MyTheme.statusConnecting;
+  }
+  if (stateGlobal.connectedPeerIds.contains(entry.id)) {
+    return MyTheme.statusOnline;
+  }
+  if (stateGlobal.addressListOnlineStates[entry.id] == true) {
+    return MyTheme.statusOnline;
+  }
+  return MyTheme.statusOffline;
 }
 
 /// Panel izquierdo con lista de direcciones: Favoritos, Historial, Libreta.

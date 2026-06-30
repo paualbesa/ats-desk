@@ -250,19 +250,27 @@ class ColorThemeExtension extends ThemeExtension<ColorThemeExtension> {
 class MyTheme {
   MyTheme._();
 
-  static const Color grayBg = Color(0xFFEFEFF2);
-  // ATS Desk naranja corporativo
-  static const Color accent = Color(0xFFFF9800);
-  static const Color accent50 = Color(0x77FF9800);
-  static const Color accent80 = Color(0xAAFF9800);
+  static const Color grayBg = Color(0xFFF0F0F0);
+  static const Color panelBg = Color(0xFFFFFFFF);
+  static const Color centerBg = Color(0xFFF5F5F5);
+  // ATS Desk naranja corporativo (paleta unificada estilo AnyDesk)
+  static const Color accent = Color(0xFFE8762E);
+  static const Color accentHover = Color(0xFFD96A24);
+  static const Color accent50 = Color(0x77E8762E);
+  static const Color accent80 = Color(0xAAE8762E);
   static const Color canvasColor = Color(0xFF212121);
-  static const Color border = Color(0xFFCCCCCC);
-  static const Color idColor = Color(0xFFFFB74D);
+  static const Color border = Color(0xFFE0E0E0);
+  static const Color idColor = Color(0xFFE8762E);
   static const Color darkGray = Color.fromARGB(255, 148, 148, 148);
-  static const Color cmIdColor = Color(0xFFF57C00);
+  static const Color cmIdColor = Color(0xFFE8762E);
   static const Color dark = Colors.black87;
-  static const Color button = Color(0xFFFF9800);
+  static const Color button = Color(0xFFE8762E);
   static const Color hoverBorder = Color(0xFF999999);
+  static const Color danger = Color(0xFFE53935);
+  static const Color statusOnline = Color(0xFF4CAF50);
+  static const Color statusConnecting = Color(0xFFFF9800);
+  static const Color statusOffline = Color(0xFFE53935);
+  static const Color statusReady = Color(0xFF26A69A);
 
   // ListTile
   static const ListTileThemeData listTileTheme = ListTileThemeData(
@@ -376,8 +384,8 @@ class MyTheme {
     // https://stackoverflow.com/questions/77537315/after-upgrading-to-flutter-3-16-the-app-bar-background-color-button-size-and
     useMaterial3: false,
     brightness: Brightness.light,
-    hoverColor: Color.fromARGB(255, 224, 224, 224),
-    scaffoldBackgroundColor: Colors.white,
+    hoverColor: Color.fromARGB(255, 240, 240, 240),
+    scaffoldBackgroundColor: centerBg,
     dialogBackgroundColor: Colors.white,
     appBarTheme: AppBarTheme(
       shadowColor: Colors.transparent,
@@ -456,7 +464,10 @@ class MyTheme {
         style:
             MenuStyle(backgroundColor: MaterialStatePropertyAll(Colors.white))),
     colorScheme: ColorScheme.light(
-        primary: accent, secondary: accent, background: grayBg),
+        primary: accent,
+        secondary: accent,
+        background: panelBg,
+        surface: panelBg),
     popupMenuTheme: PopupMenuThemeData(
         color: Colors.white,
         shape: RoundedRectangleBorder(
@@ -564,7 +575,7 @@ class MyTheme {
         style: MenuStyle(
             backgroundColor: MaterialStatePropertyAll(Color(0xFF121212)))),
     colorScheme: ColorScheme.dark(
-      primary: Colors.blue,
+      primary: accent,
       secondary: accent,
       background: Color(0xFF24252B),
     ),
