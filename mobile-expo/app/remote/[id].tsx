@@ -100,7 +100,7 @@ export default function RemoteSessionScreen() {
     <View style={styles.root}>
       <View style={[styles.topBar, { paddingTop: insets.top + 6 }]}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backIcon}>
-          <Ionicons name="chevron-back" size={24} color={AlbesaColors.text} />
+          <Ionicons name="chevron-back" size={24} color={AlbesaColors.textOnDark} />
         </Pressable>
         <View style={styles.topMeta}>
           <Text style={styles.peerId}>{id}</Text>
@@ -110,7 +110,7 @@ export default function RemoteSessionScreen() {
           <Ionicons
             name={toolbarVisible ? 'eye-off-outline' : 'eye-outline'}
             size={22}
-            color={AlbesaColors.textSecondary}
+            color={AlbesaColors.textSecondaryOnDark}
           />
         </Pressable>
       </View>
@@ -161,7 +161,7 @@ export default function RemoteSessionScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#000' },
   center: { flex: 1, backgroundColor: AlbesaColors.bgDark, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  loadingText: { color: AlbesaColors.textSecondary, marginTop: 14, fontSize: 14 },
+  loadingText: { color: AlbesaColors.textSecondaryOnDark, marginTop: 14, fontSize: 14 },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -174,11 +174,11 @@ const styles = StyleSheet.create({
   },
   backIcon: { padding: 4 },
   topMeta: { flex: 1 },
-  peerId: { color: AlbesaColors.text, fontSize: 17, fontWeight: '700', letterSpacing: 0.5 },
-  status: { color: AlbesaColors.textSecondary, fontSize: 12, marginTop: 2 },
+  peerId: { color: AlbesaColors.textOnDark, fontSize: 17, fontWeight: '700', letterSpacing: 0.5 },
+  status: { color: AlbesaColors.textSecondaryOnDark, fontSize: 12, marginTop: 2 },
   web: { flex: 1, backgroundColor: '#000' },
   errorTitle: { color: AlbesaColors.danger, fontSize: 20, fontWeight: '700' },
-  errorText: { color: AlbesaColors.textSecondary, textAlign: 'center', marginTop: 10 },
+  errorText: { color: AlbesaColors.textSecondaryOnDark, textAlign: 'center', marginTop: 10 },
   backBtn: { marginTop: 20, backgroundColor: AlbesaColors.accent, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14 },
   backBtnText: { color: '#fff', fontWeight: '700' },
 });

@@ -30,7 +30,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await login(email.trim(), password);
-      router.replace('/(tabs)');
+      router.replace('/');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Error de inicio de sesión');
     } finally {
@@ -92,19 +92,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 24,
   },
-  brandTitle: { color: AlbesaColors.text, fontSize: 32, fontWeight: '800', letterSpacing: -0.5 },
-  brandSub: { color: AlbesaColors.textSecondary, marginTop: 4, fontSize: 15 },
+  brandTitle: { color: AlbesaColors.textOnDark, fontSize: 32, fontWeight: '800', letterSpacing: -0.5 },
+  brandSub: { color: AlbesaColors.textSecondaryOnDark, marginTop: 4, fontSize: 15 },
   card: { marginBottom: 20 },
-  label: { color: AlbesaColors.textSecondary, fontSize: 13, marginBottom: 6, marginTop: 8 },
+  label: { color: AlbesaColors.textSecondaryOnDark, fontSize: 13, marginBottom: 6, marginTop: 8 },
   input: {
     backgroundColor: AlbesaColors.surface,
     borderRadius: 14,
     padding: 14,
-    color: AlbesaColors.text,
+    color: AlbesaColors.textOnDark,
     borderWidth: 1,
-    borderColor: AlbesaColors.border,
+    borderColor: AlbesaColors.borderDark,
     fontSize: 16,
   },
   error: { color: AlbesaColors.danger, marginTop: 10, fontSize: 13 },
-  footer: { textAlign: 'center', color: AlbesaColors.textSecondary, fontSize: 12 },
+  footer: { textAlign: 'center', color: AlbesaColors.textSecondaryOnDark, fontSize: 12 },
 });
