@@ -2,22 +2,30 @@ import { SquircleGlass } from '@/src/components/SquircleGlass';
 import { DeskConfig } from '@/src/config/desk';
 import { useDeskServerStatus } from '@/src/hooks/useDeskServerStatus';
 import { useAuth } from '@/src/services/auth';
-import { accentForOnline, AlbesaColors, AlbesaRadius } from '@/src/theme/albesa';
+import { AlbesaRadius } from '@/src/theme/albesa';
+import { useTheme, type ThemeMode } from '@/src/theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const PORTS = ['21115/tcp', '21116/tcp+udp', '21117/tcp', '21118/tcp', '21119/tcp'];
+const THEME_OPTIONS: { key: ThemeMode; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'light', label: 'Claro', icon: 'sunny-outline' },
+  { key: 'dark', label: 'Oscuro', icon: 'moon-outline' },
+  { key: 'system', label: 'Sistema', icon: 'phone-portrait-outline' },
+];
 
 export default function SettingsScreen() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { online, wsOnline, refresh } = useDeskServerStatus();
+  const { colors, accent, mode, setMode } = useTheme();
 
-  const accent = accentForOnline(online);
+  const accentColor = accent(online);
 
   const onLogout = async () => {
     await logout();
@@ -25,57 +33,106 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
+    <View style={[styles.root, { backgroundColor: colors.bg, paddingTop: insets.top }]}>
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="chevron-back" size={26} color={AlbesaColors.text} />
+          <Ionicons name="chevron-back" size={26} color={colors.text} />
         </Pressable>
-        <Text style={styles.title}>Ajustes</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Ajustes</Text>
         <View style={{ width: 26 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.pad}>
-        <SquircleGlass online={online} style={styles.card}>
-          <Text style={styles.label}>Cuenta</Text>
-          <Text style={styles.value}>{user?.email}</Text>
-        </SquircleGlass>
+        <Animated.View entering={FadeInDown.delay(30)}>
+          <SquircleGlass online={online} style={styles.card} padding={16}>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Cuenta</Text>
+            <Text style={[styles.value, { color: colors.text }]}>{user?.email}</Text>
+          </SquircleGlass>
+        </Animated.View>
 
-        <SquircleGlass online={online} style={styles.card}>
-          <View style={styles.row}>
-            <Text style={styles.label}>Servidor ATS Desk</Text>
-            <Pressable onPress={refresh}>
-              <Ionicons name="refresh" size={18} color={accent} />
-            </Pressable>
-          </View>
-          <Text style={[styles.status, { color: accent }]}>
-            {online ? (wsOnline ? 'En línea (ID + WebSocket)' : 'En línea (ID; WS directo :21118)') : 'Sin conexión'}
-          </Text>
-          <Text style={styles.meta}>ID · {DeskConfig.rendezvousServer}</Text>
-          <Text style={styles.meta}>Relay · {DeskConfig.relayServer}</Text>
-        </SquircleGlass>
-
-        <SquircleGlass online={online} style={styles.card}>
-          <Text style={styles.label}>Puertos requeridos (firewall)</Text>
-          {PORTS.map((p) => (
-            <Text key={p} style={styles.meta}>
-              · {p}
+        <Animated.View entering={FadeInDown.delay(60)}>
+          <SquircleGlass online={online} style={styles.card} padding={16}>
+            <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 12 }]}>
+              Apariencia
             </Text>
-          ))}
-          <Text style={[styles.hint, { marginTop: 10 }]}>
-            DNS: desk.albesa.tech → IP pública (solo DNS, nube gris en Cloudflare). No uses el túnel CF para RustDesk.
-          </Text>
-        </SquircleGlass>
+            <View style={styles.themeRow}>
+              {THEME_OPTIONS.map((opt) => {
+                const active = mode === opt.key;
+                return (
+                  <Pressable
+                    key={opt.key}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setMode(opt.key);
+                    }}
+                    style={[
+                      styles.themeChip,
+                      {
+                        borderColor: active ? accentColor : colors.border,
+                        backgroundColor: active ? colors.accentGlass : 'transparent',
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name={opt.icon}
+                      size={18}
+                      color={active ? accentColor : colors.textSecondary}
+                    />
+                    <Text
+                      style={{
+                        color: active ? accentColor : colors.textSecondary,
+                        fontWeight: active ? '700' : '500',
+                        fontSize: 13,
+                      }}
+                    >
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </SquircleGlass>
+        </Animated.View>
 
-        <Pressable onPress={onLogout} style={[styles.logout, { borderColor: accent }]}>
-          <Text style={[styles.logoutText, { color: accent }]}>Cerrar sesión</Text>
-        </Pressable>
+        <Animated.View entering={FadeInDown.delay(90)}>
+          <SquircleGlass online={online} style={styles.card} padding={16}>
+            <View style={styles.row}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Servidor ATS Desk</Text>
+              <Pressable onPress={refresh}>
+                <Ionicons name="refresh" size={18} color={accentColor} />
+              </Pressable>
+            </View>
+            <Text style={[styles.status, { color: accentColor }]}>
+              {online
+                ? wsOnline
+                  ? 'En línea'
+                  : 'En línea (ID)'
+                : 'Sin conexión'}
+            </Text>
+            <Text style={[styles.meta, { color: colors.textSecondary }]}>
+              ID · {DeskConfig.rendezvousServer}
+            </Text>
+            <Text style={[styles.meta, { color: colors.textSecondary }]}>
+              Relay · {DeskConfig.relayServer}
+            </Text>
+          </SquircleGlass>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(120)}>
+          <Pressable
+            onPress={onLogout}
+            style={[styles.logout, { borderColor: accentColor }]}
+          >
+            <Text style={[styles.logoutText, { color: accentColor }]}>Cerrar sesión</Text>
+          </Pressable>
+        </Animated.View>
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: AlbesaColors.bg },
+  root: { flex: 1 },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -83,15 +140,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  title: { fontSize: 18, fontWeight: '700', color: AlbesaColors.text },
+  title: { fontSize: 18, fontWeight: '700' },
   pad: { padding: 18, paddingBottom: 40 },
-  card: { padding: 16, marginBottom: 12 },
+  card: { marginBottom: 12 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  label: { color: AlbesaColors.textSecondary, fontSize: 13, marginBottom: 6 },
-  value: { color: AlbesaColors.text, fontSize: 17, fontWeight: '600' },
+  label: { fontSize: 13, marginBottom: 6 },
+  value: { fontSize: 17, fontWeight: '600' },
   status: { fontSize: 16, fontWeight: '700', marginBottom: 8 },
-  meta: { color: AlbesaColors.textSecondary, fontSize: 13, marginTop: 4 },
-  hint: { color: AlbesaColors.textTertiary, fontSize: 12, lineHeight: 17 },
+  meta: { fontSize: 13, marginTop: 4 },
+  themeRow: { flexDirection: 'row', gap: 8 },
+  themeChip: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: AlbesaRadius.md,
+    borderWidth: 1.5,
+  },
   logout: {
     marginTop: 20,
     padding: 16,

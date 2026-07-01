@@ -1,16 +1,55 @@
 import { DeskConfig } from '@/src/config/desk';
 import { resolveDeskWebRelayHost } from '@/src/config/deskWs';
+import { WORKER_POLYFILL_SCRIPT } from '@/src/remote/workerPolyfill';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import { unzip } from 'fflate';
 
 const CACHE_DIR = `${FileSystem.cacheDirectory}rustdesk-web/`;
-const READY_MARKER = `${CACHE_DIR}.ready`;
+const READY_MARKER = `${CACHE_DIR}.ready_v3`;
+
+function uint8ToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+function patchIndexHtml(html: string): string {
+  let patched = html;
+  patched = patched.replace(/<base\s+href="[^"]*"\s*\/?>/i, '<base href="./" />');
+  if (!patched.includes('ats-worker-polyfill')) {
+    patched = patched.replace(
+      /<script\s+type="module"/i,
+      `<script id="ats-worker-polyfill">${WORKER_POLYFILL_SCRIPT}</script>\n    <script type="module"`,
+    );
+  }
+  return patched;
+}
+
+async function patchExtractedClient() {
+  const indexPath = `${CACHE_DIR}index.html`;
+  const info = await FileSystem.getInfoAsync(indexPath);
+  if (!info.exists) return;
+  const html = await FileSystem.readAsStringAsync(indexPath);
+  const patched = patchIndexHtml(html);
+  if (patched !== html) {
+    await FileSystem.writeAsStringAsync(indexPath, patched);
+  }
+}
 
 /** Extrae el cliente web RustDesk (bundled zip) al cache del dispositivo. */
 export async function ensureDeskWebClient(): Promise<string> {
+  const remote = DeskConfig.webClientBase?.trim();
+  if (remote) {
+    return remote.replace(/\/$/, '') + '/index.html';
+  }
+
   const marker = await FileSystem.getInfoAsync(READY_MARKER);
   if (marker.exists) {
+    await patchExtractedClient();
     return `file://${CACHE_DIR}index.html`;
   }
 
@@ -39,11 +78,11 @@ export async function ensureDeskWebClient(): Promise<string> {
           if (dir.length > CACHE_DIR.length - 1) {
             await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
           }
-          const b64 = btoa(String.fromCharCode(...data));
-          await FileSystem.writeAsStringAsync(out, b64, {
+          await FileSystem.writeAsStringAsync(out, uint8ToBase64(data), {
             encoding: FileSystem.EncodingType.Base64,
           });
         }
+        await patchExtractedClient();
         await FileSystem.writeAsStringAsync(READY_MARKER, '1');
         resolve();
       } catch (e) {
@@ -57,7 +96,7 @@ export async function ensureDeskWebClient(): Promise<string> {
 
 /** URL hash RustDesk. Usa nginx si está activo; si no, IP:21116 → ws directo :21118. */
 export async function buildDeskWebSessionUrl(peerId: string, password?: string): Promise<string> {
-  const id = peerId.replace(/\s/g, '');
+  const id = peerId.replace(/\D/g, '').slice(0, 6);
   const relayHost = await resolveDeskWebRelayHost();
   const key = encodeURIComponent(DeskConfig.serverKey);
   const pass = password ? `&password=${encodeURIComponent(password)}` : '';
