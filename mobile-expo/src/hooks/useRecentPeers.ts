@@ -33,7 +33,7 @@ export function useRecentPeers() {
 
   const addPeer = useCallback(
     async (id: string, label?: string) => {
-      const normalized = id.replace(/\s/g, '');
+      const normalized = id.replace(/\D/g, '').slice(0, 6);
       setPeers((prev) => {
         const existing = prev.find((p) => p.id === normalized);
         const next = [
@@ -81,7 +81,17 @@ export function useRecentPeers() {
   return { peers, favorites, addPeer, removePeer, toggleFavorite, reload: load, persist };
 }
 
+/** Solo dígitos, máximo 6. Visual: 123 456 */
 export function formatDeskId(raw: string) {
-  const digits = raw.replace(/\D/g, '').slice(0, 12);
-  return digits.replace(/(\d{3})(?=\d)/g, '$1 ').trim();
+  const digits = raw.replace(/\D/g, '').slice(0, 6);
+  if (digits.length <= 3) return digits;
+  return `${digits.slice(0, 3)} ${digits.slice(3)}`;
+}
+
+export function normalizeDeskId(raw: string) {
+  return raw.replace(/\D/g, '').slice(0, 6);
+}
+
+export function isValidDeskId(raw: string) {
+  return normalizeDeskId(raw).length === 6;
 }
