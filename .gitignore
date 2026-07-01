@@ -18,6 +18,7 @@ cert.pfx
 !mobile-expo/assets/**/*.zip
 !flutter/assets/ATSDESKicon*.png
 !flutter/windows/runner/resources/ATSDESKicon*.png
+!assets/branding/*.png
 *svg
 *jpg
 sciter.dll
