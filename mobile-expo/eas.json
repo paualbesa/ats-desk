@@ -15,7 +15,7 @@
         "EXPO_PUBLIC_DESK_SERVER_KEY": "RoldVL1Npn0FLv274f1N6zlbWlhZKoOiYUvObjDLomo="
       },
       "ios": {
-        "simulator": true
+        "simulator": false
       }
     },
     "preview": {

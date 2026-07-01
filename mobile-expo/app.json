@@ -8,6 +8,9 @@
     "scheme": "atsdesk",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "assetBundlePatterns": [
+      "assets/**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "tech.albesa.atsdesk",

@@ -15,6 +15,7 @@ cert.pfx
 *.bak
 *png
 !mobile-expo/assets/**/*.png
+!mobile-expo/assets/**/*.zip
 *svg
 *jpg
 sciter.dll

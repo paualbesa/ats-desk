@@ -13,7 +13,7 @@ mobile-expo/
 │   │   ├── index.tsx       # Conectar por ID
 │   │   ├── sessions.tsx    # Recientes
 │   │   └── settings.tsx    # Cuenta y servidor
-│   └── remote/[id].tsx     # Sesión remota (gestos + toolbar)
+│   └── remote/[id].tsx     # Sesión remota (WebView RustDesk empaquetado)
 ├── src/
 │   ├── theme/albesa.ts     # Colores, espaciado, marca
 │   ├── config/desk.ts      # Rendezvous, relay, clave pública
@@ -22,7 +22,8 @@ mobile-expo/
 │   │   └── auth.tsx        # AuthProvider
 │   ├── hooks/useRecentPeers.ts
 │   ├── components/         # Glass UI, toolbar, teclado
-│   └── remote/deskBridgeHtml.ts  # WebView bridge (cliente web)
+│   └── remote/deskWebClient.ts  # Extrae rustdesk-web.zip + URL sesión
+├── assets/rustdesk-web.zip # Cliente web RustDesk V2 (~1.6 MB)
 ├── app.json
 ├── eas.json
 └── .env.example
