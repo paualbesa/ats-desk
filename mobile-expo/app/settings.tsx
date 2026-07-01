@@ -15,7 +15,7 @@ export default function SettingsScreen() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { online, refresh } = useDeskServerStatus();
+  const { online, wsOnline, refresh } = useDeskServerStatus();
 
   const accent = accentForOnline(online);
 
@@ -48,7 +48,7 @@ export default function SettingsScreen() {
             </Pressable>
           </View>
           <Text style={[styles.status, { color: accent }]}>
-            {online ? 'En línea' : 'Sin conexión'}
+            {online ? (wsOnline ? 'En línea (ID + WebSocket)' : 'En línea (ID; WS directo :21118)') : 'Sin conexión'}
           </Text>
           <Text style={styles.meta}>ID · {DeskConfig.rendezvousServer}</Text>
           <Text style={styles.meta}>Relay · {DeskConfig.relayServer}</Text>
