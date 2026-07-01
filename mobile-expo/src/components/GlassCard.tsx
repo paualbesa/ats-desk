@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
     borderRadius: AlbesaRadius.lg,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: AlbesaColors.border,
+    borderColor: AlbesaColors.borderDark,
   },
   gradient: {
     borderRadius: AlbesaRadius.lg,
@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
     borderRadius: AlbesaRadius.lg,
     backgroundColor: AlbesaColors.bgElevated,
     borderWidth: 1,
-    borderColor: AlbesaColors.border,
+    borderColor: AlbesaColors.borderDark,
     padding: 16,
   },
 });

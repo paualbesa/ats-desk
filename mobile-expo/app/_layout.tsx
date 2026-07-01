@@ -19,7 +19,7 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
   const inAuth = segments[0] === 'login';
 
   if (!session && !inAuth) return <Redirect href="/login" />;
-  if (session && inAuth) return <Redirect href="/(tabs)" />;
+  if (session && inAuth) return <Redirect href="/" />;
 
   return <>{children}</>;
 }
@@ -30,7 +30,8 @@ export default function RootLayout() {
       <AuthProvider>
         <NavigationGuard>
           <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
-            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="index" />
+            <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="login" />
             <Stack.Screen
               name="remote/[id]"
@@ -46,7 +47,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   loading: {
     flex: 1,
-    backgroundColor: AlbesaColors.bgDark,
+    backgroundColor: AlbesaColors.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
