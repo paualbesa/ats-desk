@@ -2,6 +2,24 @@
 
 Si la app muestra **sin conexión** o no conecta a equipos remotos, revisa esto en orden.
 
+# Si hbbs responde pero el vídeo móvil falla → WebSocket roto
+
+En el **servidor** (SSH):
+
+```bash
+cd ~/albesa/ats-desk
+git pull
+bash scripts/diagnose-desk-server.sh    # ver qué falla
+bash scripts/fix-desk-websocket.sh    # actualiza hbbs + nginx /ws/id
+```
+
+El script `fix-desk-websocket.sh`:
+1. Actualiza hbbs/hbbr a **1.1.15**
+2. Reinicia PM2 con relay `desk.albesa.tech`
+3. Instala nginx en puerto **80** con `/ws/id` → 21118 y `/ws/relay` → 21119
+
+Tras ejecutarlo, la app móvil debería mostrar **naranja** y conectar vídeo.
+
 ## 1. DNS (ya hecho si creaste el A record)
 
 ```

@@ -54,11 +54,11 @@ export async function ensureDeskWebClient(): Promise<string> {
   return `file://${CACHE_DIR}index.html`;
 }
 
-/** URL hash RustDesk: conexión relay forzada al servidor Albesa (ws:// desde file://). */
+/** URL hash RustDesk. Hostname sin puerto → ws://host/ws/id (nginx en :80). */
 export function buildDeskWebSessionUrl(peerId: string, password?: string): string {
   const id = peerId.replace(/\s/g, '');
-  const server = DeskConfig.rendezvousServer;
+  const host = DeskConfig.rendezvousServer.split(':')[0];
   const key = encodeURIComponent(DeskConfig.serverKey);
   const pass = password ? `&password=${encodeURIComponent(password)}` : '';
-  return `#/${id}/r@${server}?key=${key}${pass}`;
+  return `#/${id}/r@${host}?key=${key}${pass}`;
 }
