@@ -68,7 +68,8 @@ PY
 echo ""
 
 echo "==> Nginx"
-systemctl is-active nginx 2>/dev/null || echo "nginx no activo"
+systemctl is-active nginx 2>/dev/null || echo "nginx: inactivo — ejecuta: bash scripts/fix-desk-websocket.sh"
+curl -s --max-time 2 "http://127.0.0.1/health" -H "Host: desk.albesa.tech" 2>/dev/null && echo " /health OK" || echo "/health no responde (nginx parado o mal configurado)"
 echo ""
 echo "Si WebSocket falla pero 21116 OK → ejecuta: bash scripts/fix-desk-websocket.sh"
 echo "=========================================="
