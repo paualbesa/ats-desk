@@ -32,8 +32,34 @@ mobile-expo/
 ## Requisitos
 
 - Node 20+
-- Cuenta [Expo](https://expo.dev) (EAS Build para iOS)
-- Apple Developer (para instalación en dispositivo / TestFlight)
+- **Expo Go** en el móvil (SDK **54**) — no requiere cuenta Apple Developer
+- Cuenta Apple Developer ($99/año) — solo para instalar dev client / TestFlight sin Expo Go
+
+## Probar en el móvil con Expo Go (recomendado sin cuenta Apple)
+
+El proyecto usa **Expo SDK 54**, compatible con tu Expo Go actual.
+
+```bash
+cd mobile-expo
+npm install
+npx expo start
+```
+
+1. Abre **Expo Go** en el iPhone/Android
+2. Escanea el código QR (misma red Wi‑Fi que el PC)
+3. Login con tu cuenta albesa.tech (Supabase)
+
+> Si ves "requires a newer version of Expo Go", actualiza Expo Go en la App Store o confirma que el proyecto sigue en SDK 54 (`package.json` → `"expo": "~54.0.0"`).
+
+## Build nativo (requiere Apple Developer)
+
+Para instalar la app como binario propio (sin Expo Go):
+
+```bash
+eas build --platform ios --profile development
+```
+
+Necesitas cuenta [Apple Developer Program](https://developer.apple.com/programs/) y configurar credenciales en EAS.
 
 ## Configuración
 
@@ -71,40 +97,36 @@ npx expo run:ios
 eas build --profile development --platform ios
 ```
 
-## Build iOS (EAS)
+## Build iOS (EAS) — dispositivo físico
 
-Proyecto Expo: [@albesatech/ats-desk-mobile](https://expo.dev/accounts/albesatech/projects/ats-desk-mobile)
+Proyecto: [@albesatech/ats-desk-mobile](https://expo.dev/accounts/albesatech/projects/ats-desk-mobile)
+
+Perfil **development** → `"simulator": false` (dev client para iPhone real).
 
 ```bash
 cd mobile-expo
 npx eas-cli login
-npx eas build --platform ios --profile development   # simulador / dev client
-npx eas build --platform ios --profile preview       # dispositivo físico (requiere credenciales Apple)
+npx eas-cli credentials:configure-build -p ios -e development
+npx eas-cli build --platform ios --profile development
 ```
 
-**Build iOS completado (development / dev client):**
+> Si Apple bloquea la cuenta tras intentos fallidos de login, desbloquéala en [iforgot.apple.com](https://iforgot.apple.com) y usa app-specific password si tienes 2FA.
 
-- ID: `b583e92d-c511-4c0e-b44a-3d4be1beff4e`
-- Instalar: https://expo.dev/accounts/albesatech/projects/ats-desk-mobile/builds/b583e92d-c511-4c0e-b44a-3d4be1beff4e
-- Artefacto: https://expo.dev/artifacts/eas/zu8__eCUx6SqavNulUrPQkZ0YN4IeNLprOY0NWzIDMQ.tar.gz
-
-Para **iPhone físico** (TestFlight / Ad Hoc), ejecuta `eas build --profile preview` tras configurar credenciales Apple en [expo.dev → Credentials](https://expo.dev/accounts/albesatech/projects/ats-desk-mobile/credentials). La cuenta albesatech ha agotado créditos gratuitos del periodo; puede requerir plan de pago para builds adicionales.
+Build simulador (referencia): https://expo.dev/accounts/albesatech/projects/ats-desk-mobile/builds/b583e92d-c511-4c0e-b44a-3d4be1beff4e
 
 ## Flujo de la app
 
 1. **Login** — `signInWithPassword` contra Supabase (misma base que ats-web).
-2. **Conectar** — Introducir ID ATS Desk (9–12 dígitos); se guarda en recientes.
-3. **Sesión remota** — Gestos (tap, arrastre, pinch, long press), toolbar (ratón, zoom, teclado, desconectar), hoja de teclado con atajos.
+2. **Conectar** — Introducir ID ATS Desk; se guarda en recientes.
+3. **Sesión remota** — Cliente web RustDesk empaquetado: vídeo, ratón, teclado nativos del cliente.
 
-## Cliente remoto: fases
+## Cliente remoto — vídeo en vivo
 
-### Fase 1 (esta app) — UI + protocolo vía WebView
+La app empaqueta **RustDesk Web V2** en `assets/rustdesk-web.zip`. En la primera sesión se extrae al cache y se carga vía `file://` con hash `#/ID/r@169.155.235.85:21116?key=...`.
 
-Si despliegas el **cliente web** de RustDesk en tu servidor y defines `EXPO_PUBLIC_DESK_WEB_BASE`, la pantalla remota carga el bridge HTML y envía eventos táctiles al cliente web.
+Desde `file://` el cliente usa **ws://** directo al puerto 21118 (sin nginx/WSS). Es la vía más rápida para tener vídeo funcionando.
 
-### Fase 2 — Módulo nativo iOS/Android
-
-Paridad total con el cliente Flutter requiere enlazar `librustdesk` (FFI) en un módulo Expo/React Native, igual que `flutter_rust_bridge` en `flutter/`. Es el camino para vídeo H.264, baja latencia y portapapeles nativo.
+**Mejora futura:** `scripts/setup-desk-web-nginx.sh` en el servidor para `desk.albesa.tech` con WSS (`/ws/id`, `/ws/relay`).
 
 ## Servidor ATS Desk
 
