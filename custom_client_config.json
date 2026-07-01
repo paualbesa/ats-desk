@@ -1,8 +1,9 @@
 {
   "app-name": "ATS Desk",
   "override-settings": {
-    "custom-rendezvous-server": "server.albesa.tech:21116",
-    "relay-server": "server.albesa.tech:21117",
+    "custom-rendezvous-server": "169.155.235.85:21116",
+    "relay-server": "169.155.235.85:21117",
+    "key": "RoldVL1Npn0FLv274f1N6zlbWlhZKoOiYUvObjDLomo=",
     "api-server": "",
     "hide-proxy-settings": "Y",
     "hide-websocket-settings": "Y",

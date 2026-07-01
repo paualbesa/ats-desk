@@ -1,0 +1,55 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://jaucqsyvqiwmxmdqfeet.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_e_eKzfJtJrdSgPEQV2hLrA_DLagBtt0",
+        "EXPO_PUBLIC_DESK_ID_SERVER": "169.155.235.85:21116",
+        "EXPO_PUBLIC_DESK_RELAY_SERVER": "169.155.235.85:21117",
+        "EXPO_PUBLIC_DESK_SERVER_KEY": "RoldVL1Npn0FLv274f1N6zlbWlhZKoOiYUvObjDLomo="
+      },
+      "ios": {
+        "simulator": true
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://jaucqsyvqiwmxmdqfeet.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_e_eKzfJtJrdSgPEQV2hLrA_DLagBtt0",
+        "EXPO_PUBLIC_DESK_ID_SERVER": "169.155.235.85:21116",
+        "EXPO_PUBLIC_DESK_RELAY_SERVER": "169.155.235.85:21117",
+        "EXPO_PUBLIC_DESK_SERVER_KEY": "RoldVL1Npn0FLv274f1N6zlbWlhZKoOiYUvObjDLomo="
+      },
+      "ios": {
+        "simulator": false
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://jaucqsyvqiwmxmdqfeet.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_e_eKzfJtJrdSgPEQV2hLrA_DLagBtt0",
+        "EXPO_PUBLIC_DESK_ID_SERVER": "169.155.235.85:21116",
+        "EXPO_PUBLIC_DESK_RELAY_SERVER": "169.155.235.85:21117",
+        "EXPO_PUBLIC_DESK_SERVER_KEY": "RoldVL1Npn0FLv274f1N6zlbWlhZKoOiYUvObjDLomo="
+      },
+      "ios": {
+        "resourceClass": "m-medium"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "info@albesa.tech"
+      }
+    }
+  }
+}

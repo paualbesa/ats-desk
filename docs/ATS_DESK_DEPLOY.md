@@ -196,9 +196,141 @@ El script instala Node.js, PM2, RustDesk server (hbbs + hbbr) y los deja corrien
   "app-name": "ATS Desk",
   "override-settings": {
     "custom-rendezvous-server": "server.albesa.tech:21116",
-    "relay-server": "server.albesa.tech:21117"
+    "relay-server": "server.albesa.tech:21117",
+    "key": "CLAVE_PUBLICA_DE_id_ed25519.pub"
   }
 }
 ```
 
-> **Nota:** Si `server.albesa.tech` está detrás de Cloudflare, SSH y los puertos RustDesk deben apuntar a la IP real del servidor (registros DNS «solo DNS» / grey cloud), no al proxy naranja.
+La clave `key` es obligatoria con servidor propio. En el servidor:
+```bash
+cat ~/rustdesk-data/id_ed25519.pub
+```
+
+> **Nota:** Si `server.albesa.tech` está detrás de Cloudflare, los registros DNS deben estar en **solo DNS** (nube gris), no proxy naranja. RustDesk usa TCP/UDP en 21115–21119 y no funciona a través del proxy de Cloudflare.
+
+### Cloudflare Tunnel (`cfargotunnel.com`) — importante
+
+Si el registro DNS de `server` es un **CNAME** a `….cfargotunnel.com`, **no basta con poner nube gris**. Todo el tráfico pasa por el túnel de Cloudflare. El túnel solo expone lo que configuraste en **Public Hostnames** (normalmente solo SSH). Por eso:
+
+- `Test-NetConnection server.albesa.tech -Port 22` puede funcionar (SSH vía túnel).
+- `Test-NetConnection server.albesa.tech -Port 21116` falla (`TcpTestSucceeded: False`).
+- `nslookup` devuelve IPs de Cloudflare (`104.21.x.x`), no la IP del VPS.
+
+**Solución recomendada:** usar **dos nombres distintos**:
+
+| Subdominio | Tipo DNS | Destino | Uso |
+|------------|----------|---------|-----|
+| `server.albesa.tech` | CNAME | `….cfargotunnel.com` | SSH (como ahora) |
+| `desk.albesa.tech` | **A** | **IP pública real del VPS** | RustDesk (nube gris) |
+
+Pasos:
+
+1. Conectado por SSH al VPS, obtén la IP pública:
+   ```bash
+   curl -4 ifconfig.me
+   ```
+2. En Cloudflare → DNS → **Crear registro**:
+   - Tipo: **A**
+   - Nombre: `desk` (queda `desk.albesa.tech`)
+   - Contenido: la IP del paso 1
+   - Proxy: **Solo DNS (gris)**
+3. Abre puertos en el VPS y en el panel del proveedor: `21115–21119`.
+4. Actualiza `custom_client_config.json`:
+   ```json
+   "custom-rendezvous-server": "desk.albesa.tech:21116",
+   "relay-server": "desk.albesa.tech:21117"
+   ```
+5. Comprueba desde Windows:
+   ```powershell
+   nslookup desk.albesa.tech
+   Test-NetConnection desk.albesa.tech -Port 21116
+   ```
+   La IP debe ser la del VPS (no `104.21.x.x`) y `TcpTestSucceeded` debe ser `True`.
+
+**No recomendado:** añadir Public Hostnames TCP en el túnel para 21116/21117. RustDesk usa **UDP** en 21116 y varios puertos; el túnel está pensado para SSH/HTTP, no para esto.
+
+### Starlink con IP pública (tu caso real)
+
+Aunque creas que no hay IP pública, el servidor puede tener una **IP saliente de Starlink** (ej. `169.155.235.85`). El problema no es Starlink en sí, sino el **DNS**:
+
+- `server.albesa.tech` → túnel Cloudflare → **solo SSH/HTTP**
+- Los clientes deben usar la **IP pública** o un subdominio **A** directo (nube gris)
+
+**Ya aplicado en el servidor:**
+- `hbbs -r 169.155.235.85:21117` (antes apuntaba al túnel → incorrecto)
+- Puertos 21115–21119 escuchando
+
+**Config cliente** (`custom_client_config.json` junto al exe):
+```json
+"custom-rendezvous-server": "169.155.235.85:21116",
+"relay-server": "169.155.235.85:21117",
+"key": "RoldVL1Npn0FLv274f1N6zlbWlhZKoOiYUvObjDLomo="
+```
+
+**Opcional (recomendado):** en Cloudflare DNS crea **A** `desk` → `169.155.235.85` (solo DNS, gris) y cambia el config a `desk.albesa.tech:21116`. Script:
+```bash
+CLOUDFLARE_API_TOKEN=xxx bash scripts/cloudflare-desk-dns.sh
+```
+
+**En el servidor:** `bash scripts/setup-rustdesk-public-endpoint.sh`
+
+### Starlink / sin IP pública (CGNAT puro)
+
+Si el «servidor» está en una red **Starlink** (sin IP pública), **no puedes** usar un registro DNS **A** al VPS: no hay IP fija en Internet hacia esa máquina.
+
+Tu setup actual tiene sentido para **SSH**:
+
+```
+server.albesa.tech  →  CNAME  →  cfargotunnel.com  →  cloudflared  →  PC Starlink
+```
+
+Eso **solo** expone lo configurado en el túnel (SSH). RustDesk **no** puede usar ese mismo camino de forma fiable:
+
+| Método | ¿Sirve para RustDesk? |
+|--------|------------------------|
+| CNAME al túnel Cloudflare | Solo SSH / HTTP; no TCP+UDP crudo en 21116 |
+| Public Hostname TCP en túnel | El **cliente** necesitaría `cloudflared` (no vale para ATS Desk normal) |
+| Registro A sin IP pública | Imposible |
+| **VPS barato con IP pública** | **Sí — recomendado** |
+
+#### Arquitectura recomendada (la más simple)
+
+```
+┌─────────────────────────────┐     ┌──────────────────────────────┐
+│  VPS ~3–5 €/mes             │     │  Oficina / Starlink (CGNAT)   │
+│  IP pública fija            │     │  Sin IP pública               │
+│  hbbs + hbbr (pm2 ats-desk) │     │  Solo clientes ATS Desk       │
+│  desk.albesa.tech → A → IP  │     │  server.albesa.tech → túnel   │
+└─────────────────────────────┘     │  (solo SSH, opcional)         │
+                                    └──────────────────────────────┘
+```
+
+1. Contratar un VPS pequeño (Hetzner, OVH, Oracle free tier, etc.) con **IP pública**.
+2. Instalar ahí `hbbs` + `hbbr` (`scripts/setup-rustdesk-pm2.sh`).
+3. DNS: `desk.albesa.tech` → **A** → IP del VPS (nube gris).
+4. `custom_client_config.json`:
+   ```json
+   "custom-rendezvous-server": "desk.albesa.tech:21116",
+   "relay-server": "desk.albesa.tech:21117"
+   ```
+5. Los PCs en Starlink **no alojan** el servidor; solo ejecutan ATS Desk como clientes.
+
+El servidor RustDesk pesa muy poco (decenas de MB RAM); no hace falta que esté en el mismo sitio que Starlink.
+
+#### Si insistes en alojar hbbs en el Starlink
+
+Necesitas un túnel que reenvíe **TCP y UDP** en los puertos 21115–21117 (Pangolin, `frp` hacia un VPS, etc.). **Cloudflare Tunnel no es adecuado** para clientes RustDesk estándar.
+
+### Si aparece «Failed to connect to server…: Por favor intente mas tarde»
+
+1. **DNS:** `server.albesa.tech` debe resolver a la IP real del VPS (no a IPs de Cloudflare).
+2. **Puertos abiertos** en firewall del servidor: `21115/tcp`, `21116/tcp+udp`, `21117/tcp`, `21118/tcp`, `21119/tcp`.
+3. **Servidor activo:** `pm2 list` → proceso `ats-desk` en estado `online`.
+4. **Clave pública:** `key` en `custom_client_config.json` debe coincidir con `~/rustdesk-data/id_ed25519.pub`.
+5. **Config junto al exe:** `custom_client_config.json` debe estar en la misma carpeta que `ATS-Desk.exe`.
+6. **Prueba de red** (desde el PC cliente):
+   ```bat
+   Test-NetConnection server.albesa.tech -Port 21116
+   ```
+   `TcpTestSucceeded` debe ser `True`.

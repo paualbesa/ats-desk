@@ -1,9 +1,16 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// Sistema de diseño ATS Desk — squircles, naranja corporativo, tipografía moderna.
 class AtsDesign {
   AtsDesign._();
+
+  static bool get _useSystemUiFont =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.macOS ||
+          defaultTargetPlatform == TargetPlatform.linux);
 
   // ── Marca naranja ─────────────────────────────────────────────────────────
   static const Color accent = Color(0xFFE8762E);
@@ -75,28 +82,61 @@ class AtsDesign {
   static const Curve animSpring = Curves.easeOutBack;
 
   // ── Tipografía ────────────────────────────────────────────────────────────
-  static String? get fontFamily => GoogleFonts.plusJakartaSans().fontFamily;
-  static String? get monoFamily => GoogleFonts.jetBrainsMono().fontFamily;
+  /// En escritorio usamos fuentes del sistema (mejor suavizado/ClearType en Windows).
+  static String? get fontFamily {
+    if (kIsWeb) {
+      return GoogleFonts.plusJakartaSans().fontFamily;
+    }
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.windows:
+        return 'Segoe UI';
+      case TargetPlatform.macOS:
+        return null; // San Francisco del sistema
+      case TargetPlatform.linux:
+        return 'Ubuntu';
+      default:
+        return GoogleFonts.plusJakartaSans().fontFamily;
+    }
+  }
+
+  static String? get monoFamily {
+    if (kIsWeb) {
+      return GoogleFonts.jetBrainsMono().fontFamily;
+    }
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.windows:
+        return 'Cascadia Mono';
+      case TargetPlatform.macOS:
+        return 'Menlo';
+      case TargetPlatform.linux:
+        return 'Ubuntu Mono';
+      default:
+        return GoogleFonts.jetBrainsMono().fontFamily;
+    }
+  }
 
   static TextTheme textTheme(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
     final fg = isDark ? darkText : lightText;
     final fg2 = isDark ? darkTextSecondary : lightTextSecondary;
     final base = TextTheme(
-      displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: fg, letterSpacing: -0.5),
-      displayMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: fg, letterSpacing: -0.4),
-      headlineLarge: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: fg, letterSpacing: -0.3),
+      displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.w600, color: fg, letterSpacing: -0.2),
+      displayMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: fg, letterSpacing: -0.15),
+      headlineLarge: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: fg, letterSpacing: -0.1),
       headlineMedium: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: fg),
       titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: fg),
-      titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: fg),
-      titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: fg),
-      bodyLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: fg, height: 1.4),
-      bodyMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: fg, height: 1.35),
-      bodySmall: TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: fg2, height: 1.3),
+      titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: fg),
+      titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: fg),
+      bodyLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: fg, height: 1.45),
+      bodyMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: fg, height: 1.4),
+      bodySmall: TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: fg2, height: 1.35),
       labelLarge: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: accent),
       labelMedium: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: fg2),
-      labelSmall: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: fg2, letterSpacing: 0.3),
+      labelSmall: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: fg2, letterSpacing: 0.2),
     );
+    if (_useSystemUiFont) {
+      return base.apply(fontFamily: fontFamily, fontFamilyFallback: const ['sans-serif']);
+    }
     return GoogleFonts.plusJakartaSansTextTheme(base);
   }
 
@@ -107,11 +147,22 @@ class AtsDesign {
     Color? color,
   }) {
     final isDark = brightness == Brightness.dark;
+    final resolved = color ?? (isDark ? darkText : lightText);
+    if (_useSystemUiFont) {
+      return TextStyle(
+        fontFamily: monoFamily,
+        fontFamilyFallback: const ['monospace'],
+        fontSize: fontSize,
+        fontWeight: weight,
+        color: resolved,
+        letterSpacing: 0.6,
+      );
+    }
     return GoogleFonts.jetBrainsMono(
       fontSize: fontSize,
       fontWeight: weight,
-      color: color ?? (isDark ? darkText : lightText),
-      letterSpacing: 1.2,
+      color: resolved,
+      letterSpacing: 0.8,
     );
   }
 
