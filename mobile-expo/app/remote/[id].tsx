@@ -36,15 +36,19 @@ export default function RemoteSessionScreen() {
   const [touchMode, setTouchMode] = useState<TouchMode>('touch');
   const [zoom, setZoom] = useState<ZoomMode>('fit');
 
-  const sessionHash = buildDeskWebSessionUrl(String(id ?? ''), password ? String(password) : undefined);
+  const [sessionHash, setSessionHash] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const base = await ensureDeskWebClient();
+        const [base, hash] = await Promise.all([
+          ensureDeskWebClient(),
+          buildDeskWebSessionUrl(String(id ?? ''), password ? String(password) : undefined),
+        ]);
         if (!cancelled) {
           setWebBase(base);
+          setSessionHash(hash);
           setStatus('Conectando…');
         }
       } catch (e) {
@@ -56,7 +60,7 @@ export default function RemoteSessionScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [id, password]);
 
   const onNavChange = useCallback((nav: WebViewNavigation) => {
     if (nav.loading) return;
@@ -87,7 +91,7 @@ export default function RemoteSessionScreen() {
     );
   }
 
-  if (!webBase) {
+  if (!webBase || !sessionHash) {
     return (
       <View style={[styles.center, { paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={AlbesaColors.accent} />

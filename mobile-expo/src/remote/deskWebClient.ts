@@ -1,7 +1,8 @@
+import { DeskConfig } from '@/src/config/desk';
+import { resolveDeskWebRelayHost } from '@/src/config/deskWs';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import { unzip } from 'fflate';
-import { DeskConfig } from '@/src/config/desk';
 
 const CACHE_DIR = `${FileSystem.cacheDirectory}rustdesk-web/`;
 const READY_MARKER = `${CACHE_DIR}.ready`;
@@ -54,11 +55,11 @@ export async function ensureDeskWebClient(): Promise<string> {
   return `file://${CACHE_DIR}index.html`;
 }
 
-/** URL hash RustDesk. Hostname sin puerto → ws://host/ws/id (nginx en :80). */
-export function buildDeskWebSessionUrl(peerId: string, password?: string): string {
+/** URL hash RustDesk. Usa nginx si está activo; si no, IP:21116 → ws directo :21118. */
+export async function buildDeskWebSessionUrl(peerId: string, password?: string): Promise<string> {
   const id = peerId.replace(/\s/g, '');
-  const host = DeskConfig.rendezvousServer.split(':')[0];
+  const relayHost = await resolveDeskWebRelayHost();
   const key = encodeURIComponent(DeskConfig.serverKey);
   const pass = password ? `&password=${encodeURIComponent(password)}` : '';
-  return `#/${id}/r@${host}?key=${key}${pass}`;
+  return `#/${id}/r@${relayHost}?key=${key}${pass}`;
 }

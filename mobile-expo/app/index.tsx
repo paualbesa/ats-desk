@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
   FlatList,
+  Image,
   Platform,
   Pressable,
   StyleSheet,
@@ -122,7 +123,7 @@ export default function HomeScreen() {
         </Pressable>
 
         <View style={styles.logoRow}>
-          <View style={[styles.logoMark, { backgroundColor: accent }]} />
+          <Image source={require('../assets/images/logo.png')} style={styles.logoImage} />
           <Text style={[styles.logoText, { color: accent }]}>ATS Desk</Text>
         </View>
 
@@ -171,8 +172,8 @@ export default function HomeScreen() {
                       ? 'Comprobando servidor…'
                       : online
                         ? wsOnline
-                          ? `Servidor ${hostLabel} · listo (ID + Web)`
-                          : `ID ${hostLabel} en línea · WebSocket pendiente (ejecuta fix-desk-websocket.sh)`
+                          ? `Servidor ${hostLabel} · listo (ID + vídeo)`
+                          : `ID en línea · vídeo usará WebSocket directo (:21118)`
                         : `Sin conexión a ${hostLabel}`}
                   </Text>
                 </View>
@@ -231,11 +232,11 @@ export default function HomeScreen() {
               </SquircleGlass>
             )}
             {online && !wsOnline && !checking && (
-              <SquircleGlass online={false} radius={AlbesaRadius.md} style={styles.offlineBanner}>
-                <Ionicons name="flash-outline" size={18} color={AlbesaColors.offline} />
+              <SquircleGlass online={online} radius={AlbesaRadius.md} style={styles.offlineBanner}>
+                <Ionicons name="flash-outline" size={18} color={accent} />
                 <Text style={styles.offlineText}>
-                  El ID server funciona pero WebSocket no (necesario para vídeo móvil). En el servidor ejecuta: bash
-                  ~/albesa/ats-desk/scripts/fix-desk-websocket.sh
+                  El servidor ID responde. El vídeo intentará WebSocket directo en el puerto 21118. Para mejor rendimiento,
+                  ejecuta en el servidor: bash ~/albesa/ats-desk/scripts/fix-desk-websocket.sh
                 </Text>
               </SquircleGlass>
             )}
@@ -286,7 +287,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.6)',
   },
   logoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  logoMark: { width: 14, height: 14, borderRadius: 5, transform: [{ rotate: '45deg' }] },
+  logoImage: { width: 28, height: 28, borderRadius: 8 },
   logoText: { fontSize: 22, fontWeight: '800', letterSpacing: -0.3 },
   remoteInputWrap: {
     marginTop: 16,

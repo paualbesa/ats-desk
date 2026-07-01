@@ -71,6 +71,14 @@ fi
 echo "   hbbs/hbbr en ejecución"
 
 echo "==> 4. Nginx (proxy WebSocket en puerto 80)"
+if ss -tlnp 2>/dev/null | grep -q ':80 '; then
+  echo "   Puerto 80 ya en uso:"
+  ss -tlnp 2>/dev/null | grep ':80 ' || true
+  if ! systemctl is-active --quiet nginx 2>/dev/null; then
+    echo "   ADVERTENCIA: hay algo en :80 pero nginx no está activo."
+    echo "   Si no es nginx, libera el puerto 80 o configura el proxy manualmente."
+  fi
+fi
 if ! command -v nginx >/dev/null; then
   sudo apt-get update -y -qq
   sudo apt-get install -y -qq nginx
