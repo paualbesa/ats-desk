@@ -4,41 +4,64 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 function parseHostPort() {
   const raw = DeskConfig.rendezvousServer;
   const [host, port] = raw.split(':');
-  return { host, port: port || '21116', wsPort: String(Number(port || 21116) + 2) };
+  return { host, port: port || '21116' };
 }
 
-/** Comprueba reachability del servidor ID (WebSocket puerto 21118). */
+/** hbbs no habla HTTP: si el puerto responde y cuelga → AbortError = en línea. */
+async function probeTcpPort(host: string, port: string, timeoutMs = 4000): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    await fetch(`http://${host}:${port}`, { method: 'GET', signal: controller.signal });
+    clearTimeout(timer);
+    return true;
+  } catch (e: unknown) {
+    if (e instanceof Error && e.name === 'AbortError') return true;
+    return false;
+  }
+}
+
+/** Comprueba hbbs (21116) y opcionalmente WebSocket vía nginx /ws/id en :80. */
 export function useDeskServerStatus(pollMs = 15000) {
   const [online, setOnline] = useState<boolean | null>(null);
+  const [wsOnline, setWsOnline] = useState<boolean | null>(null);
   const [lastCheck, setLastCheck] = useState<number | null>(null);
   const checking = useRef(false);
 
   const check = useCallback(async () => {
     if (checking.current) return;
     checking.current = true;
-    const { host, wsPort } = parseHostPort();
+    const { host, port } = parseHostPort();
 
-    const result = await new Promise<boolean>((resolve) => {
+    const hbbsOk = await probeTcpPort(host, port);
+    setOnline(hbbsOk);
+
+    const wsOk = await new Promise<boolean>((resolve) => {
       let done = false;
       const finish = (v: boolean) => {
-        if (done) return;
-        done = true;
-        resolve(v);
+        if (!done) {
+          done = true;
+          resolve(v);
+        }
       };
       try {
-        const ws = new WebSocket(`ws://${host}:${wsPort}`);
+        const ws = new WebSocket(`ws://${host}/ws/id`);
+        const t = setTimeout(() => finish(false), 4000);
         ws.onopen = () => {
+          clearTimeout(t);
           ws.close();
           finish(true);
         };
-        ws.onerror = () => finish(false);
-        setTimeout(() => finish(false), 4500);
+        ws.onerror = () => {
+          clearTimeout(t);
+          finish(false);
+        };
       } catch {
         finish(false);
       }
     });
+    setWsOnline(wsOk);
 
-    setOnline(result);
     setLastCheck(Date.now());
     checking.current = false;
   }, []);
@@ -49,5 +72,11 @@ export function useDeskServerStatus(pollMs = 15000) {
     return () => clearInterval(id);
   }, [check, pollMs]);
 
-  return { online: online === true, checking: online === null, lastCheck, refresh: check };
+  return {
+    online: online === true,
+    wsOnline: wsOnline === true,
+    checking: online === null,
+    lastCheck,
+    refresh: check,
+  };
 }

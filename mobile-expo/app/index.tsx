@@ -80,7 +80,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { peers, favorites, addPeer, toggleFavorite } = useRecentPeers();
-  const { online, checking, refresh } = useDeskServerStatus();
+  const { online, wsOnline, checking, refresh } = useDeskServerStatus();
 
   const [remoteId, setRemoteId] = useState('');
   const [segment, setSegment] = useState<Segment>('recientes');
@@ -167,10 +167,12 @@ export default function HomeScreen() {
                     {user?.email?.split('@')[0] ?? '— — —'}
                   </Text>
                   <Text style={styles.yourHint}>
-                    {online
-                      ? `Servidor ${hostLabel} · en línea`
-                      : checking
-                        ? 'Comprobando servidor…'
+                    {checking
+                      ? 'Comprobando servidor…'
+                      : online
+                        ? wsOnline
+                          ? `Servidor ${hostLabel} · listo (ID + Web)`
+                          : `ID ${hostLabel} en línea · WebSocket pendiente (ejecuta fix-desk-websocket.sh)`
                         : `Sin conexión a ${hostLabel}`}
                   </Text>
                 </View>
@@ -224,7 +226,16 @@ export default function HomeScreen() {
               <SquircleGlass online={false} radius={AlbesaRadius.md} style={styles.offlineBanner}>
                 <Ionicons name="warning-outline" size={18} color={AlbesaColors.offline} />
                 <Text style={styles.offlineText}>
-                  No hay conexión con el servidor. Comprueba que hbbs esté activo y los puertos 21115–21119 abiertos en el firewall.
+                  hbbs no responde en el puerto 21116. En el servidor: pm2 list · pm2 logs ats-desk
+                </Text>
+              </SquircleGlass>
+            )}
+            {online && !wsOnline && !checking && (
+              <SquircleGlass online={false} radius={AlbesaRadius.md} style={styles.offlineBanner}>
+                <Ionicons name="flash-outline" size={18} color={AlbesaColors.offline} />
+                <Text style={styles.offlineText}>
+                  El ID server funciona pero WebSocket no (necesario para vídeo móvil). En el servidor ejecuta: bash
+                  ~/albesa/ats-desk/scripts/fix-desk-websocket.sh
                 </Text>
               </SquircleGlass>
             )}

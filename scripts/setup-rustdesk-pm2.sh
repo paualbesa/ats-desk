@@ -4,7 +4,7 @@ set -euo pipefail
 
 RELAY_HOST="${RELAY_HOST:-server.albesa.tech}"
 RELAY_PORT="${RELAY_PORT:-21117}"
-VERSION="${RUSTDESK_VERSION:-1.1.11-1}"
+VERSION="${RUSTDESK_VERSION:-1.1.15}"
 BIN_DIR="${HOME}/bin"
 DATA_DIR="${HOME}/rustdesk-data"
 REPO_DIR="${ATS_DESK_REPO:-${HOME}/albesa/ats-desk}"

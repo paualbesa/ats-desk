@@ -13,7 +13,7 @@ module.exports = {
       interpreter: 'bash',
       cwd: REPO,
       env: {
-        RELAY_HOST: process.env.RELAY_HOST || '',
+        RELAY_HOST: process.env.RELAY_HOST || 'desk.albesa.tech',
         RELAY_PORT: process.env.RELAY_PORT || '21117',
         ATS_DESK_BIN_DIR: process.env.ATS_DESK_BIN_DIR || path.join(HOME, 'bin'),
         ATS_DESK_DATA_DIR: process.env.ATS_DESK_DATA_DIR || path.join(HOME, 'rustdesk-data'),
