@@ -15,20 +15,73 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 BRANDING = ROOT / "assets" / "branding"
-TRANSPARENT = BRANDING / "ATSDeskTransparenticon.png"
-WHITE_CANDIDATES = (
-    BRANDING / "ATSDeskicon.png",
-    BRANDING / "ATSDeskWhiteicon.png",
+
+TRANSPARENT_NAMES = (
+    "ATSDeskTransparenticon.png",
+    "ATSDeskTransparentIcon.png",
+    "atsdesktransparenticon.png",
+)
+
+WHITE_NAMES = (
+    "ATSDeskicon.png",
+    "ATSDeskIcon.png",
+    "ATSDeskWhiteicon.png",
+    "ATSDeskWhiteIcon.png",
+    "atsdeskicon.png",
 )
 
 
-def resolve_white(explicit: Path | None) -> Path:
-    if explicit and explicit.is_file():
-        return explicit
-    for path in WHITE_CANDIDATES:
+def find_in_branding(names: tuple[str, ...]) -> Path | None:
+    if not BRANDING.is_dir():
+        return None
+    # Coincidencia exacta (sensible a mayúsculas en Linux; en Windows Path.exists es case-insensitive)
+    for name in names:
+        path = BRANDING / name
         if path.is_file():
             return path
-    return WHITE_CANDIDATES[0]
+    # Fallback: comparar sin distinguir mayúsculas
+    lower_map = {p.name.lower(): p for p in BRANDING.glob("*.png")}
+    for name in names:
+        hit = lower_map.get(name.lower())
+        if hit and hit.is_file():
+            return hit
+    return None
+
+
+def resolve_transparent(explicit: Path | None) -> Path:
+    if explicit is not None:
+        p = explicit if explicit.is_absolute() else (Path.cwd() / explicit)
+        if p.is_file():
+            return p.resolve()
+    found = find_in_branding(TRANSPARENT_NAMES)
+    if found:
+        return found
+    return BRANDING / TRANSPARENT_NAMES[0]
+
+
+def resolve_white(explicit: Path | None, transparent: Path) -> Path:
+    if explicit is not None:
+        p = explicit if explicit.is_absolute() else (Path.cwd() / explicit)
+        if p.is_file():
+            return p.resolve()
+    found = find_in_branding(WHITE_NAMES)
+    if found:
+        return found
+    # Cualquier otro PNG en branding que no sea el transparente
+    if BRANDING.is_dir():
+        for png in sorted(BRANDING.glob("*.png")):
+            if png.resolve() != transparent.resolve():
+                return png
+    return BRANDING / WHITE_NAMES[0]
+
+
+def list_branding_files() -> str:
+    if not BRANDING.is_dir():
+        return f"(la carpeta no existe: {BRANDING})"
+    files = sorted(BRANDING.glob("*.png"))
+    if not files:
+        return "(no hay archivos .png)"
+    return "\n".join(f"  - {f.name}" for f in files)
 
 
 def main() -> None:
@@ -39,21 +92,42 @@ def main() -> None:
         sys.exit(1)
 
     parser = argparse.ArgumentParser(description="Genera iconos ATS Desk desde branding maestro")
-    parser.add_argument("--transparent", type=Path, default=TRANSPARENT, help="PNG transparente 2048")
-    parser.add_argument("--white", type=Path, default=None, help="PNG fondo blanco 2048")
+    parser.add_argument(
+        "--transparent",
+        type=Path,
+        default=None,
+        help="PNG transparente 2048 (por defecto: assets/branding/ATSDeskTransparenticon.png)",
+    )
+    parser.add_argument(
+        "--white",
+        type=Path,
+        default=None,
+        help="PNG fondo blanco 2048 (por defecto: assets/branding/ATSDeskicon.png)",
+    )
     args = parser.parse_args()
 
-    white_path = resolve_white(args.white)
-    for label, path in [("transparente", args.transparent), ("blanco", white_path)]:
-        if not path.is_file():
-            print(f"ERROR: falta el PNG {label}: {path}")
-            print("Copia tus archivos 2048×2048 en assets/branding/:")
-            print(f"  - {TRANSPARENT.name}")
-            print(f"  - {WHITE.name}")
-            sys.exit(1)
+    transparent_path = resolve_transparent(args.transparent)
+    white_path = resolve_white(args.white, transparent_path)
 
-    transparent = Image.open(args.transparent).convert("RGBA")
-    white = Image.open(args.white).convert("RGBA")
+    missing = []
+    if not transparent_path.is_file():
+        missing.append(("transparente", transparent_path, TRANSPARENT_NAMES[0]))
+    if not white_path.is_file():
+        missing.append(("blanco", white_path, WHITE_NAMES[0]))
+
+    if missing:
+        print("ERROR: faltan PNG maestros en assets/branding/\n")
+        for label, path, example in missing:
+            print(f"  {label}: no encontrado ({path})")
+            print(f"    nombre esperado: {example}")
+        print(f"\nArchivos .png actuales en {BRANDING}:")
+        print(list_branding_files())
+        print("\nCopia tus PNG 2048×2048 y vuelve a ejecutar:")
+        print("  python scripts/generate_ats_icons.py")
+        sys.exit(1)
+
+    transparent = Image.open(transparent_path).convert("RGBA")
+    white = Image.open(white_path).convert("RGBA")
 
     def resize(img: Image.Image, size: int) -> Image.Image:
         return img.resize((size, size), Image.Resampling.LANCZOS)
@@ -105,8 +179,8 @@ def main() -> None:
     shutil.copy2(ico, ROOT / "flutter/assets/ATSDESKicon.ico")
 
     print("OK — iconos generados desde tus PNG maestros:")
-    print(f"  transparente: {args.transparent}")
-    print(f"  blanco:       {args.white}")
+    print(f"  transparente: {transparent_path}")
+    print(f"  blanco:       {white_path}")
 
 
 if __name__ == "__main__":
