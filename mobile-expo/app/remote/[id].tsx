@@ -1,291 +1,184 @@
 import { AlbesaColors } from '@/src/theme/albesa';
-import { buildDeskBridgeHtml, type BridgeMessage } from '@/src/remote/deskBridgeHtml';
 import { RemoteKeyboardSheet } from '@/src/components/RemoteKeyboardSheet';
 import {
   RemoteToolbar,
   type TouchMode,
   type ZoomMode,
 } from '@/src/components/RemoteToolbar';
+import {
+  buildDeskWebSessionUrl,
+  ensureDeskWebClient,
+} from '@/src/remote/deskWebClient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { WebView, type WebViewMessageEvent } from 'react-native-webview';
-
-type BridgeMode = 'loading' | 'web' | 'native-bridge';
+import { WebView, type WebViewNavigation } from 'react-native-webview';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function RemoteSessionScreen() {
   const { id, password } = useLocalSearchParams<{ id: string; password?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const webRef = useRef<WebView>(null);
-  const canvasRef = useRef({ width: 1, height: 1 });
 
-  const [status, setStatus] = useState('Iniciando sesión…');
-  const [bridgeMode, setBridgeMode] = useState<BridgeMode>('loading');
+  const [webBase, setWebBase] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const [status, setStatus] = useState('Preparando cliente remoto…');
   const [keyboardOpen, setKeyboardOpen] = useState(false);
-  const [toolbarExpanded, setToolbarExpanded] = useState(true);
+  const [toolbarVisible, setToolbarVisible] = useState(true);
   const [touchMode, setTouchMode] = useState<TouchMode>('touch');
   const [zoom, setZoom] = useState<ZoomMode>('fit');
 
-  const scale = useSharedValue(1);
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
-  const savedScale = useSharedValue(1);
-  const panStartX = useSharedValue(0);
-  const panStartY = useSharedValue(0);
+  const sessionHash = buildDeskWebSessionUrl(String(id ?? ''), password ? String(password) : undefined);
 
-  const html = useMemo(
-    () => buildDeskBridgeHtml(String(id ?? ''), password ? String(password) : undefined),
-    [id, password],
-  );
-
-  const postBridge = useCallback((payload: object) => {
-    const js = `window.dispatchEvent(new MessageEvent('message',{data:${JSON.stringify(JSON.stringify(payload))}}));true;`;
-    webRef.current?.injectJavaScript(js);
-  }, []);
-
-  const onWebMessage = useCallback((e: WebViewMessageEvent) => {
-    try {
-      const msg = JSON.parse(e.nativeEvent.data) as BridgeMessage;
-      if (msg.type === 'status') setStatus(msg.message);
-      if (msg.type === 'ready') {
-        setBridgeMode(msg.mode === 'web' ? 'web' : 'native-bridge');
-        setStatus(
-          msg.mode === 'web'
-            ? 'Cliente web conectado'
-            : 'Puente listo · gestos activos (vídeo nativo en fase 2)',
-        );
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const base = await ensureDeskWebClient();
+        if (!cancelled) {
+          setWebBase(base);
+          setStatus('Conectando…');
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : 'Error al cargar cliente web');
+        }
       }
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  const normCoords = useCallback((x: number, y: number) => {
-    const { width, height } = canvasRef.current;
-    return {
-      x: Math.max(0, Math.min(1, x / width)),
-      y: Math.max(0, Math.min(1, y / height)),
+    })();
+    return () => {
+      cancelled = true;
     };
   }, []);
 
-  const sendMouse = useCallback(
-    (x: number, y: number, button: number, action: string) => {
-      postBridge({ type: 'mouse', x, y, button, action, touchMode });
-    },
-    [postBridge, touchMode],
-  );
+  const onNavChange = useCallback((nav: WebViewNavigation) => {
+    if (nav.loading) return;
+    if (nav.url.includes('#/')) setStatus('Sesión remota activa');
+  }, []);
 
-  const sendKey = useCallback(
-    (code: string, down = true) => {
-      postBridge({ type: 'key', code, down });
-    },
-    [postBridge],
-  );
+  const injectKey = useCallback((code: string) => {
+    const js = `(function(){try{window.dispatchEvent(new KeyboardEvent('keydown',{key:'${code}',code:'${code}',bubbles:true}));}catch(e){}})();true;`;
+    webRef.current?.injectJavaScript(js);
+  }, []);
 
-  const pinch = Gesture.Pinch()
-    .onUpdate((e) => {
-      scale.value = Math.min(3, Math.max(0.5, savedScale.value * e.scale));
-    })
-    .onEnd(() => {
-      savedScale.value = scale.value;
-    });
+  const injectText = useCallback((text: string) => {
+    const safe = JSON.stringify(text);
+    webRef.current?.injectJavaScript(
+      `(function(){try{var el=document.activeElement;if(el&&el.tagName==='INPUT'){el.value+=${safe};el.dispatchEvent(new Event('input',{bubbles:true}));}}catch(e){}})();true;`,
+    );
+  }, []);
 
-  const twoFingerPan = Gesture.Pan()
-    .minPointers(2)
-    .onUpdate((e) => {
-      translateX.value = panStartX.value + e.translationX;
-      translateY.value = panStartY.value + e.translationY;
-    })
-    .onEnd(() => {
-      panStartX.value = translateX.value;
-      panStartY.value = translateY.value;
-    });
+  if (error) {
+    return (
+      <View style={[styles.center, { paddingTop: insets.top }]}>
+        <Text style={styles.errorTitle}>Error de sesión</Text>
+        <Text style={styles.errorText}>{error}</Text>
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Text style={styles.backBtnText}>Volver</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
-  const mouseDrag = Gesture.Pan()
-    .maxPointers(1)
-    .enabled(touchMode === 'mouse')
-    .onUpdate((e) => {
-      const { x, y } = normCoords(e.x, e.y);
-      sendMouse(x, y, 1, 'move');
-    })
-    .onEnd((e) => {
-      const { x, y } = normCoords(e.x, e.y);
-      sendMouse(x, y, 1, 'click');
-    });
-
-  const touchPan = Gesture.Pan()
-    .maxPointers(1)
-    .enabled(touchMode === 'touch')
-    .onEnd((e) => {
-      const { x, y } = normCoords(e.x, e.y);
-      sendMouse(x, y, 1, 'tap');
-    });
-
-  const tap = Gesture.Tap()
-    .enabled(touchMode === 'mouse')
-    .onEnd((e) => {
-      const { x, y } = normCoords(e.x, e.y);
-      sendMouse(x, y, 1, 'click');
-    });
-
-  const longPress = Gesture.LongPress().onStart((e) => {
-    const { x, y } = normCoords(e.x, e.y);
-    sendMouse(x, y, 2, 'rightClick');
-  });
-
-  const canvasStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: translateX.value },
-      { translateY: translateY.value },
-      { scale: scale.value },
-    ],
-  }));
-
-  const pointerGesture = Gesture.Exclusive(
-    longPress,
-    touchMode === 'mouse' ? Gesture.Race(mouseDrag, tap) : touchPan,
-  );
-  const composed = Gesture.Simultaneous(pinch, twoFingerPan, pointerGesture);
-
-  const showVideoOverlay = bridgeMode === 'native-bridge';
+  if (!webBase) {
+    return (
+      <View style={[styles.center, { paddingTop: insets.top }]}>
+        <ActivityIndicator size="large" color={AlbesaColors.accent} />
+        <Text style={styles.loadingText}>{status}</Text>
+      </View>
+    );
+  }
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Text style={styles.peerId}>{id}</Text>
-        <Text style={styles.status}>{status}</Text>
+    <View style={styles.root}>
+      <View style={[styles.topBar, { paddingTop: insets.top + 6 }]}>
+        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backIcon}>
+          <Ionicons name="chevron-back" size={24} color={AlbesaColors.text} />
+        </Pressable>
+        <View style={styles.topMeta}>
+          <Text style={styles.peerId}>{id}</Text>
+          <Text style={styles.status}>{status}</Text>
+        </View>
+        <Pressable onPress={() => setToolbarVisible((v) => !v)} hitSlop={12}>
+          <Ionicons
+            name={toolbarVisible ? 'eye-off-outline' : 'eye-outline'}
+            size={22}
+            color={AlbesaColors.textSecondary}
+          />
+        </Pressable>
       </View>
 
-      <View
-        style={styles.canvasWrap}
-        onLayout={(e) => {
-          canvasRef.current = {
-            width: e.nativeEvent.layout.width,
-            height: e.nativeEvent.layout.height,
-          };
-        }}
-      >
-        <GestureDetector gesture={composed}>
-          <Animated.View style={[styles.canvas, canvasStyle]}>
-            <WebView
-              ref={webRef}
-              originWhitelist={['*']}
-              source={{ html }}
-              style={[styles.web, showVideoOverlay && styles.webHidden]}
-              onMessage={onWebMessage}
-              allowsInlineMediaPlayback
-              mediaPlaybackRequiresUserAction={false}
-              javaScriptEnabled
-              domStorageEnabled
-              scrollEnabled={false}
-              bounces={false}
-            />
-            {showVideoOverlay && (
-              <View style={styles.nativeOverlay} pointerEvents="none">
-                <ActivityIndicator size="large" color={AlbesaColors.accent} />
-                <Text style={styles.placeholderTitle}>ATS Desk · Albesa</Text>
-                <Text style={styles.placeholderSub}>
-                  Controles táctiles activos. Para vídeo en vivo, despliega el cliente web RustDesk y
-                  define EXPO_PUBLIC_DESK_WEB_BASE en la app.
-                </Text>
-                <Text style={styles.hint}>
-                  {touchMode === 'touch' ? 'Modo táctil' : 'Modo ratón'} · Pinch para zoom
-                </Text>
-              </View>
-            )}
-            {bridgeMode === 'loading' && (
-              <View style={styles.loadingOverlay}>
-                <ActivityIndicator color={AlbesaColors.accent} />
-              </View>
-            )}
-          </Animated.View>
-        </GestureDetector>
-      </View>
+      <WebView
+        ref={webRef}
+        source={{ uri: `${webBase}${sessionHash}` }}
+        style={styles.web}
+        onNavigationStateChange={onNavChange}
+        allowsInlineMediaPlayback
+        mediaPlaybackRequiresUserAction={false}
+        javaScriptEnabled
+        domStorageEnabled
+        allowFileAccess
+        allowFileAccessFromFileURLs
+        allowUniversalAccessFromFileURLs
+        originWhitelist={['*']}
+        setSupportMultipleWindows={false}
+        onError={() => setStatus('Error de conexión WebView')}
+        onHttpError={() => setStatus('Error HTTP en cliente remoto')}
+      />
 
-      {toolbarExpanded && (
-        <RemoteToolbar
-          touchMode={touchMode}
-          onTouchModeChange={setTouchMode}
-          zoom={zoom}
-          onZoomChange={(z) => {
-            setZoom(z);
-            if (z === 'fit') {
-              scale.value = withSpring(1);
-              savedScale.value = 1;
-              translateX.value = withSpring(0);
-              translateY.value = withSpring(0);
-              panStartX.value = 0;
-              panStartY.value = 0;
-            } else {
-              const s = parseInt(z, 10) / 100;
-              scale.value = withSpring(s);
-              savedScale.value = s;
-            }
-          }}
-          onKeyboard={() => setKeyboardOpen(true)}
-          onDisconnect={() => router.back()}
-          expanded={toolbarExpanded}
-          onToggleExpand={() => setToolbarExpanded((v) => !v)}
-        />
+      {toolbarVisible && (
+        <View style={{ paddingBottom: insets.bottom + 4 }}>
+          <RemoteToolbar
+            touchMode={touchMode}
+            onTouchModeChange={setTouchMode}
+            zoom={zoom}
+            onZoomChange={setZoom}
+            onKeyboard={() => setKeyboardOpen(true)}
+            onDisconnect={() => router.back()}
+            expanded
+            onToggleExpand={() => setToolbarVisible(false)}
+          />
+        </View>
       )}
 
       <RemoteKeyboardSheet
         visible={keyboardOpen}
         onClose={() => setKeyboardOpen(false)}
-        onSendText={(t) => postBridge({ type: 'text', value: t })}
-        onSendKey={(k) => sendKey(k)}
+        onSendText={injectText}
+        onSendKey={injectKey}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: AlbesaColors.bgDark },
-  header: {
-    paddingHorizontal: 16,
+  root: { flex: 1, backgroundColor: '#000' },
+  center: { flex: 1, backgroundColor: AlbesaColors.bgDark, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  loadingText: { color: AlbesaColors.textSecondary, marginTop: 14, fontSize: 14 },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
     paddingBottom: 8,
+    backgroundColor: AlbesaColors.bgElevated,
     borderBottomWidth: 1,
     borderBottomColor: AlbesaColors.border,
+    gap: 8,
   },
-  peerId: { color: AlbesaColors.text, fontSize: 20, fontWeight: '700', letterSpacing: 1 },
-  status: { color: AlbesaColors.textSecondary, fontSize: 13, marginTop: 4 },
-  canvasWrap: { flex: 1, overflow: 'hidden' },
-  canvas: { flex: 1, overflow: 'hidden' },
+  backIcon: { padding: 4 },
+  topMeta: { flex: 1 },
+  peerId: { color: AlbesaColors.text, fontSize: 17, fontWeight: '700', letterSpacing: 0.5 },
+  status: { color: AlbesaColors.textSecondary, fontSize: 12, marginTop: 2 },
   web: { flex: 1, backgroundColor: '#000' },
-  webHidden: { opacity: 0, position: 'absolute', width: '100%', height: '100%' },
-  nativeOverlay: {
-    ...StyleSheet.absoluteFill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 28,
-    backgroundColor: '#111',
-  },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0D0D0F',
-  },
-  placeholderTitle: { color: AlbesaColors.text, fontSize: 22, fontWeight: '700', marginTop: 16 },
-  placeholderSub: {
-    color: AlbesaColors.textSecondary,
-    textAlign: 'center',
-    marginTop: 12,
-    lineHeight: 20,
-    fontSize: 14,
-  },
-  hint: { color: AlbesaColors.accent, marginTop: 20, fontWeight: '600' },
+  errorTitle: { color: AlbesaColors.danger, fontSize: 20, fontWeight: '700' },
+  errorText: { color: AlbesaColors.textSecondary, textAlign: 'center', marginTop: 10 },
+  backBtn: { marginTop: 20, backgroundColor: AlbesaColors.accent, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14 },
+  backBtnText: { color: '#fff', fontWeight: '700' },
 });
