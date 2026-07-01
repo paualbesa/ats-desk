@@ -14,9 +14,16 @@ bash scripts/fix-desk-websocket.sh    # actualiza hbbs + nginx /ws/id
 ```
 
 El script `fix-desk-websocket.sh`:
-1. Actualiza hbbs/hbbr a **1.1.15**
-2. Reinicia PM2 con relay `desk.albesa.tech`
-3. Instala nginx en puerto **80** con `/ws/id` → 21118 y `/ws/relay` → 21119
+1. **Para PM2 y hbbs/hbbr** (evita error "Text file busy")
+2. Actualiza hbbs/hbbr a **1.1.15**
+3. Reinicia PM2 con relay `desk.albesa.tech`
+4. Instala y **arranca** nginx en puerto **80** con `/ws/id` → 21118
+
+Si solo quieres parar el servicio antes de copiar binarios a mano:
+
+```bash
+bash scripts/stop-ats-desk.sh
+```
 
 Tras ejecutarlo, la app móvil debería mostrar **naranja** y conectar vídeo.
 
