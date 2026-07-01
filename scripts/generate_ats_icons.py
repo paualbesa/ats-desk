@@ -1,15 +1,34 @@
 #!/usr/bin/env python3
-"""Genera iconos ATS Desk para móvil (Expo) y escritorio (Flutter/Windows) desde un PNG maestro 1024×1024."""
+"""Genera iconos ATS Desk desde los PNG maestros del usuario (2048×2048).
+
+Fuentes (assets/branding/):
+  - ATSDeskTransparenticon.png  → logo UI, splash, Android foreground, fill1080
+  - ATSDeskicon.png              → icono de app con fondo blanco (launcher, .ico)
+"""
 
 from __future__ import annotations
 
 import argparse
-import os
 import shutil
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+BRANDING = ROOT / "assets" / "branding"
+TRANSPARENT = BRANDING / "ATSDeskTransparenticon.png"
+WHITE_CANDIDATES = (
+    BRANDING / "ATSDeskicon.png",
+    BRANDING / "ATSDeskWhiteicon.png",
+)
+
+
+def resolve_white(explicit: Path | None) -> Path:
+    if explicit and explicit.is_file():
+        return explicit
+    for path in WHITE_CANDIDATES:
+        if path.is_file():
+            return path
+    return WHITE_CANDIDATES[0]
 
 
 def main() -> None:
@@ -19,68 +38,75 @@ def main() -> None:
         print("pip install Pillow")
         sys.exit(1)
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "source",
-        nargs="?",
-        default=str(ROOT / "mobile-expo/assets/images/icon.png"),
-        help="PNG maestro (1024×1024 recomendado)",
-    )
+    parser = argparse.ArgumentParser(description="Genera iconos ATS Desk desde branding maestro")
+    parser.add_argument("--transparent", type=Path, default=TRANSPARENT, help="PNG transparente 2048")
+    parser.add_argument("--white", type=Path, default=None, help="PNG fondo blanco 2048")
     args = parser.parse_args()
-    source = Path(args.source)
-    if not source.is_file():
-        print(f"No existe: {source}")
-        sys.exit(1)
 
-    master = Image.open(source).convert("RGBA")
+    white_path = resolve_white(args.white)
+    for label, path in [("transparente", args.transparent), ("blanco", white_path)]:
+        if not path.is_file():
+            print(f"ERROR: falta el PNG {label}: {path}")
+            print("Copia tus archivos 2048×2048 en assets/branding/:")
+            print(f"  - {TRANSPARENT.name}")
+            print(f"  - {WHITE.name}")
+            sys.exit(1)
 
-    def save(img: Image.Image, path: Path, size: int, bg: str | None = None) -> None:
+    transparent = Image.open(args.transparent).convert("RGBA")
+    white = Image.open(args.white).convert("RGBA")
+
+    def resize(img: Image.Image, size: int) -> Image.Image:
+        return img.resize((size, size), Image.Resampling.LANCZOS)
+
+    def save(img: Image.Image, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        if bg:
-            canvas = Image.new("RGBA", (size, size), bg)
-            icon = img.resize((size, size), Image.Resampling.LANCZOS)
-            canvas.paste(icon, (0, 0), icon)
-            canvas.save(path, optimize=True)
-        else:
-            img.resize((size, size), Image.Resampling.LANCZOS).save(path, optimize=True)
+        img.save(path, optimize=True)
 
     mobile = ROOT / "mobile-expo/assets/images"
-    save(master, mobile / "icon.png", 1024)
-    save(master, mobile / "logo.png", 128)
-    save(master, mobile / "favicon.png", 48)
 
+    # Launcher iOS/Android — fondo blanco
+    save(resize(white, 1024), mobile / "icon.png")
+    save(resize(transparent, 128), mobile / "logo.png")
+    save(resize(white, 48), mobile / "favicon.png")
+
+    # Splash: logo transparente sobre fondo oscuro de la app
     splash = Image.new("RGBA", (1024, 1024), "#0D0D0F")
-    icon512 = master.resize((512, 512), Image.Resampling.LANCZOS)
+    icon512 = resize(transparent, 512)
     splash.paste(icon512, (256, 256), icon512)
-    splash.save(mobile / "splash-icon.png", optimize=True)
+    save(splash, mobile / "splash-icon.png")
 
+    # Android adaptive: foreground transparente, background oscuro
     fg = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
-    icon_fg = master.resize((660, 660), Image.Resampling.LANCZOS)
+    icon_fg = resize(transparent, 660)
     fg.paste(icon_fg, (182, 182), icon_fg)
-    fg.save(mobile / "android-icon-foreground.png", optimize=True)
-    Image.new("RGB", (1024, 1024), "#0D0D0F").save(mobile / "android-icon-background.png", optimize=True)
+    save(fg, mobile / "android-icon-foreground.png")
+    save(Image.new("RGB", (1024, 1024), "#0D0D0F"), mobile / "android-icon-background.png")
 
-    for name, size in [
-        ("ATSDESKicon1080.png", 1080),
-        ("ATSDESKiconfill1080.png", 1080),
-        ("ATSDESKicon256.png", 256),
-    ]:
-        path = ROOT / "flutter/assets" / name
-        if "fill" in name:
-            canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-            icon = master.resize((int(size * 0.72), int(size * 0.72)), Image.Resampling.LANCZOS)
-            off = (size - icon.width) // 2
-            canvas.paste(icon, (off, off), icon)
-            canvas.save(path, optimize=True)
-        else:
-            save(master, path, size)
+    mono = resize(transparent, 660).convert("L")
+    mono_rgba = Image.merge("RGBA", (mono, mono, mono, mono))
+    mono_canvas = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
+    mono_canvas.paste(mono_rgba, (182, 182))
+    save(mono_canvas, mobile / "android-icon-monochrome.png")
+
+    # Flutter / escritorio
+    save(resize(white, 1080), ROOT / "flutter/assets/ATSDESKicon1080.png")
+
+    fill = Image.new("RGBA", (1080, 1080), (0, 0, 0, 0))
+    fill_icon = resize(transparent, int(1080 * 0.72))
+    off = (1080 - fill_icon.width) // 2
+    fill.paste(fill_icon, (off, off), fill_icon)
+    save(fill, ROOT / "flutter/assets/ATSDESKiconfill1080.png")
+    save(resize(transparent, 256), ROOT / "flutter/assets/ATSDESKicon256.png")
 
     sizes = (256, 48, 32, 24, 16)
-    icons = [master.resize((s, s), Image.Resampling.LANCZOS) for s in sizes]
+    icons = [resize(white, s) for s in sizes]
     ico = ROOT / "flutter/windows/runner/resources/ATSDESKicon.ico"
     icons[0].save(ico, format="ICO", sizes=[(s, s) for s in sizes], append_images=icons[1:])
     shutil.copy2(ico, ROOT / "flutter/assets/ATSDESKicon.ico")
-    print("Iconos generados en mobile-expo/assets/images y flutter/assets")
+
+    print("OK — iconos generados desde tus PNG maestros:")
+    print(f"  transparente: {args.transparent}")
+    print(f"  blanco:       {args.white}")
 
 
 if __name__ == "__main__":

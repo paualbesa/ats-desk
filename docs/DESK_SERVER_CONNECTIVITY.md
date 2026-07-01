@@ -126,7 +126,10 @@ Reinicia Metro: `npx expo start --clear`
 
 ## Iconos de la app
 
-Regenerar desde el PNG maestro (`mobile-expo/assets/images/icon.png`):
+Maestros **2048×2048** en `assets/branding/`:
+
+- `ATSDeskTransparenticon.png` — transparente (UI, splash)
+- `ATSDeskicon.png` — fondo blanco (launcher, .exe)
 
 ```bash
 python3 scripts/generate_ats_icons.py
