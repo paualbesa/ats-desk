@@ -11,6 +11,7 @@ import {
 } from '@/src/remote/deskWebClient';
 import { WORKER_POLYFILL_SCRIPT } from '@/src/remote/workerPolyfill';
 import { useTheme } from '@/src/theme/ThemeContext';
+import { useKeepAwake } from 'expo-keep-awake';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -25,6 +26,8 @@ import { WebView, type WebViewNavigation } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function RemoteSessionScreen() {
+  // Mantener la pantalla encendida durante toda la sesión remota (evita cortes/lag por sleep).
+  useKeepAwake();
   const { id, password } = useLocalSearchParams<{ id: string; password?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -76,9 +79,21 @@ export default function RemoteSessionScreen() {
   }, []);
 
   const injectKey = useCallback((code: string) => {
-    const js = `(function(){try{window.dispatchEvent(new KeyboardEvent('keydown',{key:'${code}',code:'${code}',bubbles:true}));}catch(e){}})();true;`;
+    // Enviar keydown + keyup (un solo keydown no lo procesan bien muchos clientes) al canvas remoto y a window.
+    const js = `(function(){try{var t=document.querySelector('canvas')||document.activeElement||document.body;['keydown','keyup'].forEach(function(type){var ev={key:'${code}',code:'${code}',bubbles:true};try{t.dispatchEvent(new KeyboardEvent(type,ev));}catch(e){}try{window.dispatchEvent(new KeyboardEvent(type,ev));}catch(e){}});}catch(e){}})();true;`;
     webRef.current?.injectJavaScript(js);
   }, []);
+
+  // Zoom real del lienzo remoto: 'fit' quita el escalado; '100'/'150' escala el canvas por CSS.
+  const applyZoom = useCallback((z: ZoomMode) => {
+    const scale = z === '150' ? 1.5 : z === '100' ? 1 : 0;
+    const js = `(function(){try{var id='ats-zoom-style';var el=document.getElementById(id);if(${scale === 0}){if(el)el.remove();return;}if(!el){el=document.createElement('style');el.id=id;document.head.appendChild(el);}el.textContent='canvas{transform-origin:0 0 !important;transform:scale(${scale}) !important;image-rendering:auto;}';}catch(e){}})();true;`;
+    webRef.current?.injectJavaScript(js);
+  }, []);
+
+  useEffect(() => {
+    if (webBase && sessionHash) applyZoom(zoom);
+  }, [zoom, webBase, sessionHash, applyZoom]);
 
   const injectText = useCallback((text: string) => {
     const safe = JSON.stringify(text);
@@ -155,6 +170,15 @@ export default function RemoteSessionScreen() {
         originWhitelist={['*']}
         setSupportMultipleWindows={false}
         onHttpError={() => setStatus('Error HTTP en cliente remoto')}
+        // Fluidez: composición por GPU y sin scroll/overscroll que reste framerate.
+        androidLayerType="hardware"
+        renderToHardwareTextureAndroid
+        cacheEnabled
+        overScrollMode="never"
+        bounces={false}
+        scrollEnabled={false}
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
       />
 
       {toolbarVisible && (
