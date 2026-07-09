@@ -19,9 +19,13 @@
         "NSCameraUsageDescription": "ATS Desk usa la cámara para escanear códigos QR de conexión.",
         "NSMicrophoneUsageDescription": "ATS Desk puede usar el micrófono en sesiones remotas con audio.",
         "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSAllowsArbitraryLoadsInWebContent": true,
+          "NSAllowsLocalNetworking": true
+        },
+        "NSLocalNetworkUsageDescription": "ATS Desk se conecta a equipos en tu red local para el control remoto.",
         "UIBackgroundModes": [
-          "audio",
-          "fetch",
           "audio",
           "fetch"
         ]
@@ -51,6 +55,14 @@
           "image": "./assets/images/splash-icon.png",
           "resizeMode": "contain",
           "backgroundColor": "#0D0D0F"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
         }
       ]
     ],
