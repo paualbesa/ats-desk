@@ -43,6 +43,9 @@ export default function RemoteSessionScreen() {
   const [zoom, setZoom] = useState<ZoomMode>('fit');
 
   const [sessionHash, setSessionHash] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const retries = useRef(0);
+  const MAX_RETRIES = 4;
 
   useEffect(() => {
     let cancelled = false;
@@ -75,7 +78,23 @@ export default function RemoteSessionScreen() {
 
   const onWebError = useCallback((syntheticEvent: { nativeEvent: { description?: string } }) => {
     const desc = syntheticEvent.nativeEvent.description ?? 'Error de conexión';
-    setError(desc);
+    // Reintento automático con backoff antes de rendirse: mejora la robustez ante
+    // cortes de red o arranques lentos del servidor de relay.
+    if (retries.current < MAX_RETRIES) {
+      retries.current += 1;
+      setStatus(`Reintentando conexión (${retries.current}/${MAX_RETRIES})…`);
+      const delay = 800 * retries.current;
+      setTimeout(() => setReloadKey((k) => k + 1), delay);
+    } else {
+      setError(desc);
+    }
+  }, []);
+
+  const retryNow = useCallback(() => {
+    retries.current = 0;
+    setError('');
+    setStatus('Conectando…');
+    setReloadKey((k) => k + 1);
   }, []);
 
   const injectKey = useCallback((code: string) => {
@@ -109,8 +128,11 @@ export default function RemoteSessionScreen() {
       <View style={[styles.center, { paddingTop: insets.top, backgroundColor: colors.bgDark }]}>
         <Text style={[styles.errorTitle, { color: colors.danger }]}>Error de sesión</Text>
         <Text style={[styles.errorText, { color: colors.textSecondaryOnDark }]}>{error}</Text>
-        <Pressable onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: colors.accent }]}>
-          <Text style={styles.backBtnText}>Volver</Text>
+        <Pressable onPress={retryNow} style={[styles.backBtn, { backgroundColor: colors.accent }]}>
+          <Text style={styles.backBtnText}>Reintentar</Text>
+        </Pressable>
+        <Pressable onPress={() => router.back()} style={styles.secondaryBtn}>
+          <Text style={[styles.secondaryBtnText, { color: colors.textSecondaryOnDark }]}>Volver</Text>
         </Pressable>
       </View>
     );
@@ -154,6 +176,7 @@ export default function RemoteSessionScreen() {
       </View>
 
       <WebView
+        key={reloadKey}
         ref={webRef}
         source={{ uri: `${webBase}${sessionHash}` }}
         style={styles.web}
@@ -227,4 +250,6 @@ const styles = StyleSheet.create({
   errorText: { textAlign: 'center', marginTop: 10, lineHeight: 22 },
   backBtn: { marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14 },
   backBtnText: { color: '#fff', fontWeight: '700' },
+  secondaryBtn: { marginTop: 12, paddingHorizontal: 24, paddingVertical: 10 },
+  secondaryBtnText: { fontWeight: '600' },
 });
