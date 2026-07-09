@@ -1,5 +1,6 @@
 import { SquircleGlass } from '@/src/components/SquircleGlass';
 import { DeskConfig } from '@/src/config/desk';
+import { clearDeskWebRelayCache, resolveDeskWebRelayHost } from '@/src/config/deskWs';
 import { useDeskServerStatus } from '@/src/hooks/useDeskServerStatus';
 import { useAuth } from '@/src/services/auth';
 import { AlbesaRadius } from '@/src/theme/albesa';
@@ -7,7 +8,7 @@ import { useTheme, type ThemeMode } from '@/src/theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,10 +23,18 @@ export default function SettingsScreen() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { online, wsOnline, refresh } = useDeskServerStatus();
+  const { online, wsOnline, lastCheck, refresh } = useDeskServerStatus();
   const { colors, accent, mode, setMode } = useTheme();
 
   const accentColor = accent(online);
+
+  const [relayHost, setRelayHost] = useState<string | null>(null);
+  useEffect(() => {
+    clearDeskWebRelayCache();
+    resolveDeskWebRelayHost()
+      .then(setRelayHost)
+      .catch(() => setRelayHost(null));
+  }, [lastCheck]);
 
   const onLogout = async () => {
     await logout();
@@ -112,10 +121,16 @@ export default function SettingsScreen() {
                 : 'Sin conexión'}
             </Text>
             <Text style={[styles.meta, { color: colors.textSecondary }]}>
-              ID · {DeskConfig.rendezvousServer}
+              ID (hbbs) · {DeskConfig.rendezvousServer} · {online ? 'accesible' : 'sin respuesta'}
+            </Text>
+            <Text style={[styles.meta, { color: colors.textSecondary }]}>
+              WebSocket · {wsOnline ? 'accesible' : 'sin respuesta'}
             </Text>
             <Text style={[styles.meta, { color: colors.textSecondary }]}>
               Relay · {DeskConfig.relayServer}
+            </Text>
+            <Text style={[styles.meta, { color: colors.textSecondary }]}>
+              Host relay web · {relayHost ?? '…'}
             </Text>
           </SquircleGlass>
         </Animated.View>
