@@ -5,7 +5,7 @@ import { ThemeProvider, useTheme } from '@/src/theme/ThemeContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 function NavigationGuard({ children }: { children: React.ReactNode }) {
-  const { session, loading } = useAuth();
+  const { loading } = useAuth();
   const { colors } = useTheme();
   const segments = useSegments();
 
@@ -17,10 +17,10 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // La app es de uso libre: cualquiera puede usarla sin iniciar sesión.
+  // Al entrar se muestra directamente la página principal y el login queda oculto.
   const inAuth = segments[0] === 'login';
-
-  if (!session && !inAuth) return <Redirect href="/login" />;
-  if (session && inAuth) return <Redirect href="/" />;
+  if (inAuth) return <Redirect href="/" />;
 
   return <>{children}</>;
 }

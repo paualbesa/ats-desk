@@ -29,7 +29,7 @@ export default function SettingsScreen() {
 
   const onLogout = async () => {
     await logout();
-    router.replace('/login');
+    router.replace('/');
   };
 
   return (
@@ -43,12 +43,14 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.pad}>
-        <Animated.View entering={FadeInDown.delay(30)}>
-          <SquircleGlass online={online} style={styles.card} padding={16}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Cuenta</Text>
-            <Text style={[styles.value, { color: colors.text }]}>{user?.email}</Text>
-          </SquircleGlass>
-        </Animated.View>
+        {user ? (
+          <Animated.View entering={FadeInDown.delay(30)}>
+            <SquircleGlass online={online} style={styles.card} padding={16}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Cuenta</Text>
+              <Text style={[styles.value, { color: colors.text }]}>{user?.email}</Text>
+            </SquircleGlass>
+          </Animated.View>
+        ) : null}
 
         <Animated.View entering={FadeInDown.delay(60)}>
           <SquircleGlass online={online} style={styles.card} padding={16}>
@@ -118,14 +120,16 @@ export default function SettingsScreen() {
           </SquircleGlass>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(120)}>
-          <Pressable
-            onPress={onLogout}
-            style={[styles.logout, { borderColor: accentColor }]}
-          >
-            <Text style={[styles.logoutText, { color: accentColor }]}>Cerrar sesión</Text>
-          </Pressable>
-        </Animated.View>
+        {user ? (
+          <Animated.View entering={FadeInDown.delay(120)}>
+            <Pressable
+              onPress={onLogout}
+              style={[styles.logout, { borderColor: accentColor }]}
+            >
+              <Text style={[styles.logoutText, { color: accentColor }]}>Cerrar sesión</Text>
+            </Pressable>
+          </Animated.View>
+        ) : null}
       </ScrollView>
     </View>
   );
