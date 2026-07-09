@@ -54,7 +54,8 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "info@albesa.tech"
+        "appleId": "info@albesa.tech",
+        "ascAppId": "6789162063"
       }
     }
   }
