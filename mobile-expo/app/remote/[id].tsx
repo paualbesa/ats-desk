@@ -12,6 +12,7 @@ import {
 import { WORKER_POLYFILL_SCRIPT } from '@/src/remote/workerPolyfill';
 import { useTheme } from '@/src/theme/ThemeContext';
 import { useKeepAwake } from 'expo-keep-awake';
+import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -149,6 +150,7 @@ export default function RemoteSessionScreen() {
 
   return (
     <View style={styles.root}>
+      <StatusBar hidden />
       <View
         style={[
           styles.topBar,
