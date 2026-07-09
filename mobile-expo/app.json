@@ -21,6 +21,8 @@
         "ITSAppUsesNonExemptEncryption": false,
         "UIBackgroundModes": [
           "audio",
+          "fetch",
+          "audio",
           "fetch"
         ]
       }
@@ -61,6 +63,12 @@
       "eas": {
         "projectId": "d5b6519d-73ec-483f-b448-cad30b76c0bd"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/d5b6519d-73ec-483f-b448-cad30b76c0bd"
     }
   }
 }
