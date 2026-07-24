@@ -1,5 +1,7 @@
 # Conexión servidor ATS Desk — checklist
 
+**Starlink sin abrir puertos:** no puedes alojar el servidor en casa. Guía paso a paso: **`docs/DESK_STARLINK_SIN_PUERTOS.md`**.
+
 Si la app muestra **sin conexión** o no conecta a equipos remotos, revisa esto en orden.
 
 ## App móvil: servidor OK pero WebSocket no

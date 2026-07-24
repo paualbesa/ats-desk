@@ -1,6 +1,10 @@
-# desk.albesa.tech vía Cloudflare Tunnel (WebSocket + HTTP)
+# desk.albesa.tech vía Cloudflare Tunnel (solo HTTP / WebSocket)
 
-Si desde fuera de la red **21116 TCP funciona** pero **HTTP/WebSocket en :80 falla** (típico en Starlink), expón `desk.albesa.tech` por el **mismo túnel** que `server.albesa.tech`.
+**Si tienes Starlink sin reenvío de puertos**, esto **no** sustituye un servidor RustDesk. Lee primero: **`docs/DESK_STARLINK_SIN_PUERTOS.md`** (VPS recomendado).
+
+Si ya tienes **hbbs en un VPS** con IP pública, puedes usar el túnel CF **además** para HTTPS en el móvil, o servir `/health` y `/ws/id` por el túnel.
+
+Si desde fuera de la red **21116 TCP funciona** pero **HTTP/WebSocket en :80 falla** (típico en Starlink con puertos abiertos), expón `desk.albesa.tech` por el **mismo túnel** que `server.albesa.tech`.
 
 ## En Cloudflare Zero Trust
 
@@ -21,7 +25,9 @@ Si desde fuera de la red **21116 TCP funciona** pero **HTTP/WebSocket en :80 fal
 
 ## RustDesk TCP (21116–21119)
 
-El túnel HTTP **no** sustituye los puertos RustDesk. En el router Starlink sigue haciendo falta:
+Sin **VPS** o **reenvío de puertos** en el router, el túnel HTTP **no** registra IDs RustDesk. En Starlink residencial usa `docs/DESK_STARLINK_SIN_PUERTOS.md`.
+
+Si hbbs está en un **VPS**, abre en el firewall del proveedor y en el VPS:
 
 | Puerto | Protocolo |
 |--------|-----------|
