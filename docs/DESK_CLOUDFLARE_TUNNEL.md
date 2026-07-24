@@ -35,7 +35,7 @@ Si hbbs está en un **VPS**, abre en el firewall del proveedor y en el VPS:
 | 21117–21119 | TCP |
 | 21115 | TCP |
 
-Reenvío → `192.168.110.224` (IP LAN del servidor).
+En un **VPS**, el script `setup-desk-vps.sh` configura UFW automáticamente. En el panel del proveedor (Hetzner/OVH) abre los mismos puertos si aplica.
 
 ## Verificación
 
