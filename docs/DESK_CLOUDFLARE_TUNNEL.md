@@ -4,7 +4,9 @@
 
 Si ya tienes **hbbs en un VPS** con IP pública, puedes usar el túnel CF **además** para HTTPS en el móvil, o servir `/health` y `/ws/id` por el túnel.
 
-Si desde fuera de la red **21116 TCP funciona** pero **HTTP/WebSocket en :80 falla** (típico en Starlink con puertos abiertos), expón `desk.albesa.tech` por el **mismo túnel** que `server.albesa.tech`.
+Si desde fuera de la red **21116 TCP funciona** pero **HTTP/WebSocket en :80 falla** (típico con Starlink + Ruijie), expón `desk.albesa.tech` por el **mismo túnel** que `server.albesa.tech`.
+
+Con **Ruijie Reyee** y mapeo de puertos, si `scripts/diagnose-desk-portforward.sh` no ve tráfico entrante, arregla primero el NAT (`docs/DESK_RUIJIE_PORT_FORWARD.md`). El túnel CF sirve para **HTTP/WS del móvil** aunque el puerto 80 WAN falle.
 
 ## En Cloudflare Zero Trust
 
