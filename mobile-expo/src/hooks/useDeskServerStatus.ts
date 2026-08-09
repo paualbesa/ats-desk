@@ -1,12 +1,13 @@
 import {
   clearDeskWebRelayCache,
+  getWebSocketHost,
   parseDeskHostPort,
   probeDeskWebSocket,
   probeTcpPort,
 } from '@/src/config/deskWs';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-/** Comprueba hbbs (21116) y WebSocket (nginx o :21118 directo). */
+/** Comprueba hbbs (rd.albesa.tech:21116) y WebSocket (desk.albesa.tech vía túnel). */
 export function useDeskServerStatus(pollMs = 15000) {
   const [online, setOnline] = useState<boolean | null>(null);
   const [wsOnline, setWsOnline] = useState<boolean | null>(null);
@@ -22,7 +23,7 @@ export function useDeskServerStatus(pollMs = 15000) {
     const hbbsOk = await probeTcpPort(host, port);
     setOnline(hbbsOk);
 
-    const wsOk = hbbsOk ? await probeDeskWebSocket(host) : false;
+    const wsOk = await probeDeskWebSocket(getWebSocketHost());
     setWsOnline(wsOk);
 
     setLastCheck(Date.now());

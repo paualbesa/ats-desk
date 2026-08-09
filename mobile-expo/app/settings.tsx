@@ -124,7 +124,7 @@ export default function SettingsScreen() {
               ID (hbbs) · {DeskConfig.rendezvousServer} · {online ? 'accesible' : 'sin respuesta'}
             </Text>
             <Text style={[styles.meta, { color: colors.textSecondary }]}>
-              WebSocket · {wsOnline ? 'accesible' : 'sin respuesta'}
+              WebSocket · {DeskConfig.webSocketHost} · {wsOnline ? 'accesible' : 'sin respuesta'}
             </Text>
             <Text style={[styles.meta, { color: colors.textSecondary }]}>
               Relay · {DeskConfig.relayServer}

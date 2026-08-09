@@ -6,6 +6,10 @@ export function parseDeskHostPort() {
   return { host, port: port || '21116' };
 }
 
+export function getWebSocketHost(): string {
+  return DeskConfig.webSocketHost.trim() || 'desk.albesa.tech';
+}
+
 /** hbbs no habla HTTP: timeout/abort en fetch ⇒ puerto abierto. */
 export async function probeTcpPort(host: string, port: string, timeoutMs = 4000): Promise<boolean> {
   try {
@@ -87,15 +91,20 @@ function probeWebSocket(url: string, timeoutMs = 4000): Promise<boolean> {
   });
 }
 
-/** Prueba nginx (:80 /ws/id) y, si falla, WebSocket directo en :21118 vía IP. */
-export async function probeDeskWebSocket(host: string): Promise<boolean> {
+/** Prueba WSS en desk.albesa.tech (túnel) y fallback :21118 directo. */
+export async function probeDeskWebSocket(wsHost?: string): Promise<boolean> {
+  const host = wsHost ?? getWebSocketHost();
+  const { host: rdHost } = parseDeskHostPort();
   const directIp =
-    process.env.EXPO_PUBLIC_DESK_DIRECT_IP ?? (await resolveHostIpv4(host)) ?? undefined;
+    process.env.EXPO_PUBLIC_DESK_DIRECT_IP ??
+    (await resolveHostIpv4(rdHost)) ??
+    undefined;
 
   const candidates = [
+    `wss://${host}/ws/id`,
     `ws://${host}/ws/id`,
     ...(directIp ? [`ws://${directIp}:21118`] : []),
-    `ws://${host}:21118`,
+    `ws://${rdHost}:21118`,
   ];
 
   for (const url of candidates) {
@@ -108,8 +117,8 @@ let cachedWebRelayHost: string | null = null;
 
 /**
  * Host para el hash del cliente web RustDesk (`r@…`).
- * - Con nginx: dominio sin puerto → ws://dominio/ws/id
- * - Sin nginx: IP:21116 → ws://IP:21118 (conexión directa)
+ * Preferir desk.albesa.tech (túnel nginx) → wss://desk/ws/id
+ * Fallback: IP rd + puerto hbbs → ws directo :21118
  */
 export async function resolveDeskWebRelayHost(): Promise<string> {
   if (cachedWebRelayHost) return cachedWebRelayHost;
@@ -120,17 +129,15 @@ export async function resolveDeskWebRelayHost(): Promise<string> {
     return override;
   }
 
-  const { host, port } = parseDeskHostPort();
-
-  if (await probeNginxHealth(host)) {
-    cachedWebRelayHost = host;
-    return host;
+  const wsHost = getWebSocketHost();
+  if (await probeNginxHealth(wsHost)) {
+    cachedWebRelayHost = wsHost;
+    return wsHost;
   }
 
+  const { host, port } = parseDeskHostPort();
   const directIp =
-    process.env.EXPO_PUBLIC_DESK_DIRECT_IP ??
-    (await resolveHostIpv4(host)) ??
-    host;
+    process.env.EXPO_PUBLIC_DESK_DIRECT_IP ?? (await resolveHostIpv4(host)) ?? host;
   cachedWebRelayHost = `${directIp}:${port}`;
   return cachedWebRelayHost;
 }

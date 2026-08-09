@@ -1,13 +1,15 @@
 /**
  * Configuración ATS Desk (misma infra que custom_client_config.json del escritorio).
- * La clave pública del servidor hbbs.
+ * - RustDesk (hbbs/hbbr): rd.albesa.tech — DNS directo (A gris, puertos 21116–21119)
+ * - WebSocket móvil: desk.albesa.tech — túnel Cloudflare (https/wss)
  */
 export const DeskConfig = {
-  rendezvousServer: process.env.EXPO_PUBLIC_DESK_ID_SERVER ?? 'desk.albesa.tech:21116',
-  relayServer: process.env.EXPO_PUBLIC_DESK_RELAY_SERVER ?? 'desk.albesa.tech:21117',
+  rendezvousServer: process.env.EXPO_PUBLIC_DESK_ID_SERVER ?? 'rd.albesa.tech:21116',
+  relayServer: process.env.EXPO_PUBLIC_DESK_RELAY_SERVER ?? 'rd.albesa.tech:21117',
   serverKey:
     process.env.EXPO_PUBLIC_DESK_SERVER_KEY ??
     'RoldVL1Npn0FLv274f1N6zlbWlhZKoOiYUvObjDLomo=',
-  /** URL del cliente web RustDesk autoalojado (opcional, fase 2) */
+  /** Host HTTP/WSS (túnel CF). Distinto del ID server RustDesk. */
+  webSocketHost: process.env.EXPO_PUBLIC_DESK_WS_HOST ?? 'desk.albesa.tech',
   webClientBase: process.env.EXPO_PUBLIC_DESK_WEB_BASE ?? '',
 } as const;
