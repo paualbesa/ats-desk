@@ -5,10 +5,10 @@ set -euo pipefail
 BIN_DIR="${ATS_DESK_BIN_DIR:-${HOME}/bin}"
 DATA_DIR="${ATS_DESK_DATA_DIR:-${HOME}/rustdesk-data}"
 
-# Relay debe ser alcanzable por los clientes (DNS directo desk.albesa.tech, NO túnel CF).
-RELAY_HOST="${RELAY_HOST:-desk.albesa.tech}"
-if [[ "$RELAY_HOST" == "server.albesa.tech" ]]; then
-  RELAY_HOST="desk.albesa.tech"
+# Relay: DNS directo (rd.albesa.tech, nube gris). HTTP/WS móvil: desk.albesa.tech (túnel CF).
+RELAY_HOST="${RELAY_HOST:-rd.albesa.tech}"
+if [[ "$RELAY_HOST" == "server.albesa.tech" || "$RELAY_HOST" == "desk.albesa.tech" ]]; then
+  RELAY_HOST="rd.albesa.tech"
 fi
 RELAY_PORT="${RELAY_PORT:-21117}"
 
