@@ -116,7 +116,7 @@ function PeerRow({
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { colors, accent, isDark } = useTheme();
+  const { colors, accent, mode } = useTheme();
   const { peers, favorites, addPeer, toggleFavorite } = useRecentPeers();
   const { online } = useDeskServerStatus();
 
@@ -124,6 +124,10 @@ export default function HomeScreen() {
   const [segment, setSegment] = useState<Segment>('recientes');
 
   const accentColor = accent(online);
+  const titleColor = mode === 'albesa' ? colors.accent : accentColor;
+  const logoTint = titleColor === '#FFFFFF' ? '#FFFFFF' : '#FF6B00';
+  const isDark = mode === 'dark';
+
   const idReady = isValidDeskId(remoteId);
 
   const listData = useMemo(() => {
@@ -150,20 +154,40 @@ export default function HomeScreen() {
       <LinearGradient colors={colors.gradient} style={StyleSheet.absoluteFill} />
 
       <BlurView
-        intensity={isDark ? 40 : 70}
+        intensity={mode === 'albesa' ? 0 : isDark ? 40 : 70}
         tint={colors.headerBlur}
-        style={[styles.header, { paddingTop: insets.top + 8, borderBottomColor: colors.border }]}
+        style={[
+          styles.header,
+          {
+            paddingTop: insets.top + 8,
+            borderBottomColor: colors.border,
+            backgroundColor: mode === 'albesa' ? 'transparent' : undefined,
+          },
+        ]}
       >
         <View style={styles.headerSide} />
 
         <Animated.View entering={FadeIn.duration(400)} style={styles.logoRow}>
-          <Image source={require('../assets/images/logo.png')} style={styles.logoImage} />
-          <Text style={[styles.logoText, { color: accentColor }]}>ATS Desk</Text>
+          <Image
+            source={require('../assets/images/logo.png')}
+            style={[styles.logoImage, { tintColor: logoTint }]}
+          />
+          <Text style={[styles.logoText, { color: titleColor }]}>ATS Desk</Text>
         </Animated.View>
 
         <Pressable
           onPress={() => router.push('/settings')}
-          style={[styles.headerBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.6)' }]}
+          style={[
+            styles.headerBtn,
+            {
+              backgroundColor:
+                mode === 'albesa'
+                  ? 'rgba(255,255,255,0.22)'
+                  : isDark
+                    ? 'rgba(255,255,255,0.08)'
+                    : 'rgba(0,0,0,0.05)',
+            },
+          ]}
         >
           <Ionicons name="menu" size={24} color={colors.text} />
         </Pressable>
@@ -224,12 +248,17 @@ export default function HomeScreen() {
                         style={[
                           styles.segmentItem,
                           active && {
-                            backgroundColor: isDark ? colors.surface : '#fff',
+                            backgroundColor:
+                              mode === 'albesa'
+                                ? 'rgba(255,255,255,0.28)'
+                                : isDark
+                                  ? colors.surface
+                                  : colors.bgCard,
                             shadowColor: colors.shadow,
-                            shadowOpacity: 0.08,
+                            shadowOpacity: mode === 'albesa' ? 0 : 0.08,
                             shadowRadius: 8,
                             shadowOffset: { width: 0, height: 2 },
-                            elevation: 2,
+                            elevation: mode === 'albesa' ? 0 : 2,
                           },
                         ]}
                       >

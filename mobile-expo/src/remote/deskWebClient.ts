@@ -6,7 +6,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { unzip } from 'fflate';
 
 const CACHE_DIR = `${FileSystem.cacheDirectory}rustdesk-web/`;
-const READY_MARKER = `${CACHE_DIR}.ready_v3`;
+const READY_MARKER = `${CACHE_DIR}.ready_v4`;
 
 function uint8ToBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -18,13 +18,14 @@ function uint8ToBase64(bytes: Uint8Array): string {
 }
 
 function patchIndexHtml(html: string): string {
-  let patched = html;
-  patched = patched.replace(/<base\s+href="[^"]*"\s*\/?>/i, '<base href="./" />');
+  let patched = html.replace(/<base\s+href="[^"]*"\s*\/?>/i, '<base href="./" />');
   if (!patched.includes('ats-worker-polyfill')) {
-    patched = patched.replace(
-      /<script\s+type="module"/i,
-      `<script id="ats-worker-polyfill">${WORKER_POLYFILL_SCRIPT}</script>\n    <script type="module"`,
-    );
+    const inject = `<script id="ats-worker-polyfill">${WORKER_POLYFILL_SCRIPT}</script>`;
+    if (/<head[^>]*>/i.test(patched)) {
+      patched = patched.replace(/<head([^>]*)>/i, `<head$1>${inject}`);
+    } else {
+      patched = inject + patched;
+    }
   }
   return patched;
 }

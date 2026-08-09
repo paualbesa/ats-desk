@@ -15,13 +15,7 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { AtsDeskLoader } from '@/src/components/AtsDeskLoader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView, type WebViewNavigation } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
@@ -47,6 +41,17 @@ export default function RemoteSessionScreen() {
   const [reloadKey, setReloadKey] = useState(0);
   const retries = useRef(0);
   const MAX_RETRIES = 4;
+  const CONNECT_TIMEOUT_MS = 45000;
+
+  useEffect(() => {
+    if (!webBase || !sessionHash || error) return;
+    const timer = setTimeout(() => {
+      if (status !== 'Sesión remota activa') {
+        setError('Tiempo de conexión agotado. Comprueba red o ID remoto.');
+      }
+    }, CONNECT_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [webBase, sessionHash, error, status, reloadKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -142,8 +147,7 @@ export default function RemoteSessionScreen() {
   if (!webBase || !sessionHash) {
     return (
       <View style={[styles.center, { paddingTop: insets.top, backgroundColor: colors.bgDark }]}>
-        <ActivityIndicator size="large" color={colors.accent} />
-        <Text style={[styles.loadingText, { color: colors.textSecondaryOnDark }]}>{status}</Text>
+        <AtsDeskLoader label={status} />
       </View>
     );
   }

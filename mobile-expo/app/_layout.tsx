@@ -1,6 +1,7 @@
 import { Stack, useSegments, Redirect } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { AuthProvider, useAuth } from '@/src/services/auth';
+import { useWarmDeskWebClient } from '@/src/hooks/useWarmDeskWebClient';
 import { ThemeProvider, useTheme } from '@/src/theme/ThemeContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -26,6 +27,7 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
 }
 
 function RootStack() {
+  useWarmDeskWebClient();
   return (
     <NavigationGuard>
       <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>

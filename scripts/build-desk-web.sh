@@ -20,6 +20,8 @@ if [[ -d "${PUBLIC}/rustdesk-web" ]]; then
   rmdir "${PUBLIC}/rustdesk-web" 2>/dev/null || rm -rf "${PUBLIC}/rustdesk-web"
 fi
 
+python3 "${ROOT}/scripts/patch-rustdesk-web-index.py" "${PUBLIC}"
+
 cd "$WEB"
 npm install
 npm run build

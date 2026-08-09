@@ -21,6 +21,7 @@ cert.pfx
 !assets/branding/*.png
 *svg
 !desk-web/public/favicon.svg
+!desk-web/public/logo.png
 *jpg
 sciter.dll
 flutter_windows.dll
@@ -68,3 +69,4 @@ libsciter.dylib
 flutter/web/
 desk-web/node_modules/
 desk-web/dist/
+desk-web/public/rustdesk-web/
