@@ -116,13 +116,12 @@ server {
     }
 
     location / {
-        root /var/www/desk.albesa.tech;
-        try_files \$uri \$uri/ /index.html;
-    }
-
-    location /rustdesk-web/ {
-        alias /var/www/desk.albesa.tech/rustdesk-web/;
-        try_files \$uri \$uri/ /rustdesk-web/index.html;
+        proxy_pass http://127.0.0.1:${DESK_WEB_PORT:-3080};
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 }
 NGINX
