@@ -13,28 +13,28 @@ class AtsDesign {
           defaultTargetPlatform == TargetPlatform.linux);
 
   // ── Marca naranja ─────────────────────────────────────────────────────────
-  static const Color accent = Color(0xFFE8762E);
-  static const Color accentLight = Color(0xFFFF9A4D);
-  static const Color accentDark = Color(0xFFC45E1A);
-  static const Color accentHover = Color(0xFFD96A24);
-  static const Color accentSubtle = Color(0x1AE8762E);
-  static const Color accent50 = Color(0x77E8762E);
-  static const Color accent80 = Color(0xCCE8762E);
+  static const Color accent = Color(0xFFFF6B00);
+  static const Color accentLight = Color(0xFFFF8533);
+  static const Color accentDark = Color(0xFFE05F00);
+  static const Color accentHover = Color(0xFFFF7A1A);
+  static const Color accentSubtle = Color(0x1AFF6B00);
+  static const Color accent50 = Color(0x77FF6B00);
+  static const Color accent80 = Color(0xCCFF6B00);
 
   // ── Modo claro ────────────────────────────────────────────────────────────
-  static const Color lightBg = Color(0xFFF2F2F7);
+  static const Color lightBg = Color(0xFFFFFFFF);
   static const Color lightPanel = Color(0xFFFFFFFF);
   static const Color lightSurface = Color(0xFFFFFFFF);
   static const Color lightBorder = Color(0xFFE5E5EA);
-  static const Color lightText = Color(0xFF1C1C1E);
+  static const Color lightText = Color(0xFF121214);
   static const Color lightTextSecondary = Color(0xFF8E8E93);
 
   // ── Modo oscuro ───────────────────────────────────────────────────────────
-  static const Color darkBg = Color(0xFF0D0D0F);
+  static const Color darkBg = Color(0xFF121214);
   static const Color darkPanel = Color(0xFF1C1C1E);
   static const Color darkSurface = Color(0xFF2C2C2E);
   static const Color darkBorder = Color(0xFF3A3A3C);
-  static const Color darkText = Color(0xFFF2F2F7);
+  static const Color darkText = Color(0xFFFFFFFF);
   static const Color darkTextSecondary = Color(0xFF8E8E93);
 
   // ── Estado ──────────────────────────────────────────────────────────────────

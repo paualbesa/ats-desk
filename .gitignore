@@ -20,6 +20,7 @@ cert.pfx
 !flutter/windows/runner/resources/ATSDESKicon*.png
 !assets/branding/*.png
 *svg
+!desk-web/public/favicon.svg
 *jpg
 sciter.dll
 flutter_windows.dll
@@ -65,3 +66,5 @@ vcpkg_installed
 flutter/lib/generated_plugin_registrant.dart
 libsciter.dylib
 flutter/web/
+desk-web/node_modules/
+desk-web/dist/

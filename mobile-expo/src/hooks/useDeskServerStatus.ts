@@ -1,45 +1,81 @@
 import {
-  clearDeskWebRelayCache,
   getWebSocketHost,
-  parseDeskHostPort,
   probeDeskWebSocket,
   probeHbbsReachable,
 } from '@/src/config/deskWs';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-/** Comprueba hbbs (rd.albesa.tech:21116) y WebSocket (desk.albesa.tech vía túnel). */
-export function useDeskServerStatus(pollMs = 15000) {
-  const [online, setOnline] = useState<boolean | null>(null);
-  const [wsOnline, setWsOnline] = useState<boolean | null>(null);
-  const [lastCheck, setLastCheck] = useState<number | null>(null);
-  const checking = useRef(false);
+type StatusSnapshot = {
+  online: boolean;
+  wsOnline: boolean;
+  updatedAt: number;
+};
 
-  const check = useCallback(async () => {
-    if (checking.current) return;
-    checking.current = true;
-    clearDeskWebRelayCache();
+let statusCache: StatusSnapshot | null = null;
+const CACHE_SOFT_MS = 20000;
 
-    const hbbsOk = await probeHbbsReachable();
-    setOnline(hbbsOk);
+/** Comprueba hbbs y WebSocket; mantiene último estado para evitar “sin conexión” al entrar en Ajustes. */
+export function useDeskServerStatus(pollMs = 30000) {
+  const [online, setOnline] = useState<boolean | null>(() => statusCache?.online ?? null);
+  const [wsOnline, setWsOnline] = useState<boolean | null>(() => statusCache?.wsOnline ?? null);
+  const [checking, setChecking] = useState(false);
+  const [lastCheck, setLastCheck] = useState<number | null>(() => statusCache?.updatedAt ?? null);
+  const busy = useRef(false);
 
-    const wsOk = await probeDeskWebSocket(getWebSocketHost());
-    setWsOnline(wsOk);
-
-    setLastCheck(Date.now());
-    checking.current = false;
+  const applySnapshot = useCallback((snap: StatusSnapshot) => {
+    statusCache = snap;
+    setOnline(snap.online);
+    setWsOnline(snap.wsOnline);
+    setLastCheck(snap.updatedAt);
   }, []);
+
+  const check = useCallback(
+    async (opts?: { force?: boolean; clearRelay?: boolean }) => {
+      if (busy.current) return;
+      const force = opts?.force ?? false;
+      const fresh =
+        statusCache && Date.now() - statusCache.updatedAt < CACHE_SOFT_MS;
+
+      if (!force && fresh && statusCache) {
+        applySnapshot(statusCache);
+        return;
+      }
+
+      busy.current = true;
+      setChecking(true);
+
+      const [hbbsOk, wsOk] = await Promise.all([
+        probeHbbsReachable(),
+        probeDeskWebSocket(getWebSocketHost(), opts?.clearRelay),
+      ]);
+
+      applySnapshot({ online: hbbsOk, wsOnline: wsOk, updatedAt: Date.now() });
+      setChecking(false);
+      busy.current = false;
+    },
+    [applySnapshot],
+  );
 
   useEffect(() => {
     check();
-    const id = setInterval(check, pollMs);
+    const id = setInterval(() => check(), pollMs);
     return () => clearInterval(id);
   }, [check, pollMs]);
 
+  const refresh = useCallback(() => {
+    check({ force: true, clearRelay: true });
+  }, [check]);
+
+  const effectiveOnline = online ?? statusCache?.online ?? false;
+  const effectiveWsOnline = wsOnline ?? statusCache?.wsOnline ?? false;
+  const pending = checking && online === null && !statusCache;
+
   return {
-    online: online === true,
-    wsOnline: wsOnline === true,
-    checking: online === null,
+    online: effectiveOnline,
+    wsOnline: effectiveWsOnline,
+    checking: pending,
+    isRefreshing: checking && !pending,
     lastCheck,
-    refresh: check,
+    refresh,
   };
 }

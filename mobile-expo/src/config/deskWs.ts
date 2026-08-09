@@ -28,25 +28,22 @@ export async function probeTcpPort(host: string, port: string, timeoutMs = 4000)
   }
 }
 
-/** Comprueba hbbs: WS :21118 (fiable en móvil) → fetch :21116 → salud nginx (túnel). */
+/** Comprueba hbbs: nginx (rápido) → WS :21118 → fetch :21116 en paralelo. */
 export async function probeHbbsReachable(): Promise<boolean> {
+  const wsHost = getWebSocketHost();
+  if (await probeNginxHealth(wsHost, 2000)) return true;
+
   const { host, port } = parseDeskHostPort();
   const directIp =
     process.env.EXPO_PUBLIC_DESK_DIRECT_IP ?? (await resolveHostIpv4(host)) ?? undefined;
 
-  const wsCandidates = [
-    ...(directIp ? [`ws://${directIp}:21118`] : []),
-    `ws://${host}:21118`,
+  const probes: Promise<boolean>[] = [
+  ...(directIp ? [probeWebSocket(`ws://${directIp}:21118`, 2000)] : []),
+    probeWebSocket(`ws://${host}:21118`, 2000),
+    probeTcpPort(host, port, 2000),
   ];
-  for (const url of wsCandidates) {
-    if (await probeWebSocket(url)) return true;
-  }
-
-  if (await probeTcpPort(host, port)) return true;
-
-  if (await probeNginxHealth(getWebSocketHost())) return true;
-
-  return false;
+  const results = await Promise.all(probes);
+  return results.some(Boolean);
 }
 
 async function probeNginxHealth(host: string, timeoutMs = 3000): Promise<boolean> {
@@ -117,8 +114,12 @@ function probeWebSocket(url: string, timeoutMs = 4000): Promise<boolean> {
 }
 
 /** Prueba WSS en desk.albesa.tech (túnel) y fallback :21118 directo. */
-export async function probeDeskWebSocket(wsHost?: string): Promise<boolean> {
+export async function probeDeskWebSocket(wsHost?: string, clearRelay?: boolean): Promise<boolean> {
+  if (clearRelay) clearDeskWebRelayCache();
+
   const host = wsHost ?? getWebSocketHost();
+  if (await probeWebSocket(`wss://${host}/ws/id`, 2500)) return true;
+
   const { host: rdHost } = parseDeskHostPort();
   const directIp =
     process.env.EXPO_PUBLIC_DESK_DIRECT_IP ??
@@ -126,14 +127,13 @@ export async function probeDeskWebSocket(wsHost?: string): Promise<boolean> {
     undefined;
 
   const candidates = [
-    `wss://${host}/ws/id`,
     `ws://${host}/ws/id`,
     ...(directIp ? [`ws://${directIp}:21118`] : []),
     `ws://${rdHost}:21118`,
   ];
 
   for (const url of candidates) {
-    if (await probeWebSocket(url)) return true;
+    if (await probeWebSocket(url, 2000)) return true;
   }
   return false;
 }

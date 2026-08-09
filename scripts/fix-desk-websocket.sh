@@ -116,8 +116,13 @@ server {
     }
 
     location / {
-        default_type text/plain;
-        return 200 'ATS Desk — ${DOMAIN}';
+        root /var/www/desk.albesa.tech;
+        try_files \$uri \$uri/ /index.html;
+    }
+
+    location /rustdesk-web/ {
+        alias /var/www/desk.albesa.tech/rustdesk-web/;
+        try_files \$uri \$uri/ /rustdesk-web/index.html;
     }
 }
 NGINX

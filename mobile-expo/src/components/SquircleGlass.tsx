@@ -29,7 +29,7 @@ export function SquircleGlass({
   const accentColor = accent(online);
   const borderColor = bordered
     ? online
-      ? 'rgba(232,118,46,0.22)'
+      ? `${colors.accent}38`
       : colors.border
     : 'transparent';
 

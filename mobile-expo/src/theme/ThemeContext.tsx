@@ -1,9 +1,13 @@
 import * as SecureStore from 'expo-secure-store';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { useColorScheme as useSystemScheme } from 'react-native';
-import { AlbesaColors, accentForOnline, type ThemeColors } from '@/src/theme/albesa';
+import {
+  accentForOnline,
+  paletteForMode,
+  type ThemeColors,
+  type ThemePalette,
+} from '@/src/theme/albesa';
 
-export type ThemeMode = 'light' | 'dark' | 'system';
+export type ThemeMode = ThemePalette;
 
 type ThemeContextValue = {
   mode: ThemeMode;
@@ -13,24 +17,20 @@ type ThemeContextValue = {
   accent: (online?: boolean) => string;
 };
 
-const STORAGE_KEY = 'ats_theme_mode_v1';
+const STORAGE_KEY = 'ats_theme_mode_v2';
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-function resolveIsDark(mode: ThemeMode, system: 'light' | 'dark' | null | undefined) {
-  if (mode === 'system') return system === 'dark';
-  return mode === 'dark';
-}
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const system = useSystemScheme();
-  const [mode, setModeState] = useState<ThemeMode>('system');
+  const [mode, setModeState] = useState<ThemeMode>('dark');
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     SecureStore.getItemAsync(STORAGE_KEY).then((stored) => {
-      if (stored === 'light' || stored === 'dark' || stored === 'system') {
+      if (stored === 'light' || stored === 'dark' || stored === 'albesa') {
         setModeState(stored);
+      } else if (stored === 'system') {
+        setModeState('dark');
       }
       setReady(true);
     });
@@ -41,8 +41,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     SecureStore.setItemAsync(STORAGE_KEY, next);
   }, []);
 
-  const isDark = resolveIsDark(mode, system);
-  const colors = isDark ? AlbesaColors.dark : AlbesaColors.light;
+  const isDark = mode === 'dark';
+  const colors = paletteForMode(mode);
 
   const value = useMemo<ThemeContextValue>(
     () => ({
@@ -50,7 +50,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       isDark,
       colors,
       setMode,
-      accent: (online = true) => accentForOnline(online, isDark),
+      accent: (online = true) => accentForOnline(online, mode),
     }),
     [mode, isDark, colors, setMode],
   );

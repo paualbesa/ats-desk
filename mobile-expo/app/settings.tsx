@@ -16,14 +16,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const THEME_OPTIONS: { key: ThemeMode; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'light', label: 'Claro', icon: 'sunny-outline' },
   { key: 'dark', label: 'Oscuro', icon: 'moon-outline' },
-  { key: 'system', label: 'Sistema', icon: 'phone-portrait-outline' },
+  { key: 'albesa', label: 'Albesa Tech', icon: 'color-palette-outline' },
 ];
 
 export default function SettingsScreen() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { online, wsOnline, lastCheck, refresh } = useDeskServerStatus();
+  const { online, wsOnline, checking, isRefreshing, lastCheck, refresh } = useDeskServerStatus();
   const { colors, accent, mode, setMode } = useTheme();
 
   const accentColor = accent(online);
@@ -114,12 +114,17 @@ export default function SettingsScreen() {
               </Pressable>
             </View>
             <Text style={[styles.status, { color: accentColor }]}>
-              {online
-                ? wsOnline
-                  ? 'En línea'
-                  : 'En línea (ID)'
-                : 'Sin conexión'}
+              {checking
+                ? 'Comprobando…'
+                : online
+                  ? wsOnline
+                    ? 'En línea'
+                    : 'En línea (ID)'
+                  : 'Sin conexión'}
             </Text>
+            {isRefreshing ? (
+              <Text style={[styles.meta, { color: colors.textSecondary }]}>Actualizando estado…</Text>
+            ) : null}
             <Text style={[styles.meta, { color: colors.textSecondary }]}>
               ID (hbbs) · {DeskConfig.rendezvousServer} · {online ? 'accesible' : 'sin respuesta'}
             </Text>
