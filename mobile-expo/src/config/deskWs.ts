@@ -10,7 +10,7 @@ export function getWebSocketHost(): string {
   return DeskConfig.webSocketHost.trim() || 'desk.albesa.tech';
 }
 
-/** hbbs no habla HTTP: timeout/abort en fetch ⇒ puerto abierto. */
+/** hbbs no habla HTTP: timeout/abort en fetch ⇒ puerto abierto (poco fiable en RN/iOS). */
 export async function probeTcpPort(host: string, port: string, timeoutMs = 4000): Promise<boolean> {
   try {
     const controller = new AbortController();
@@ -19,9 +19,34 @@ export async function probeTcpPort(host: string, port: string, timeoutMs = 4000)
     clearTimeout(timer);
     return true;
   } catch (e: unknown) {
-    if (e instanceof Error && e.name === 'AbortError') return true;
+    if (e instanceof Error) {
+      if (e.name === 'AbortError') return true;
+      const msg = e.message.toLowerCase();
+      if (msg.includes('timed out') || msg.includes('timeout') || msg.includes('abort')) return true;
+    }
     return false;
   }
+}
+
+/** Comprueba hbbs: WS :21118 (fiable en móvil) → fetch :21116 → salud nginx (túnel). */
+export async function probeHbbsReachable(): Promise<boolean> {
+  const { host, port } = parseDeskHostPort();
+  const directIp =
+    process.env.EXPO_PUBLIC_DESK_DIRECT_IP ?? (await resolveHostIpv4(host)) ?? undefined;
+
+  const wsCandidates = [
+    ...(directIp ? [`ws://${directIp}:21118`] : []),
+    `ws://${host}:21118`,
+  ];
+  for (const url of wsCandidates) {
+    if (await probeWebSocket(url)) return true;
+  }
+
+  if (await probeTcpPort(host, port)) return true;
+
+  if (await probeNginxHealth(getWebSocketHost())) return true;
+
+  return false;
 }
 
 async function probeNginxHealth(host: string, timeoutMs = 3000): Promise<boolean> {

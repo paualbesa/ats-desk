@@ -3,7 +3,7 @@ import {
   getWebSocketHost,
   parseDeskHostPort,
   probeDeskWebSocket,
-  probeTcpPort,
+  probeHbbsReachable,
 } from '@/src/config/deskWs';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -19,8 +19,7 @@ export function useDeskServerStatus(pollMs = 15000) {
     checking.current = true;
     clearDeskWebRelayCache();
 
-    const { host, port } = parseDeskHostPort();
-    const hbbsOk = await probeTcpPort(host, port);
+    const hbbsOk = await probeHbbsReachable();
     setOnline(hbbsOk);
 
     const wsOk = await probeDeskWebSocket(getWebSocketHost());
