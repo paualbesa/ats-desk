@@ -80,7 +80,9 @@ Quita el registro **A** de `desk` si choca con el túnel. Ver `docs/DESK_CLOUDFL
 curl https://desk.albesa.tech/health
 ```
 
-RustDesk **21116/21117** siguen necesitando reenvío en el Ruijie (o un VPS). El túnel CF **no** sustituye UDP/TCP RustDesk.
+RustDesk **21116/21117** usan **`rd.albesa.tech`** (registro **A**, nube gris → IP WAN Starlink).
+
+`desk.albesa.tech` va por **túnel Cloudflare** (solo HTTP/WebSocket móvil). No uses `desk.albesa.tech:21116` — Cloudflare no reenvía RustDesk.
 
 ## Errores frecuentes en el Reyee
 
