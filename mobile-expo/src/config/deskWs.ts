@@ -21,17 +21,21 @@ export async function probeTcpPort(host: string, port: string, timeoutMs = 4000)
 }
 
 async function probeNginxHealth(host: string, timeoutMs = 3000): Promise<boolean> {
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    const res = await fetch(`http://${host}/health`, { signal: controller.signal });
-    clearTimeout(timer);
-    if (!res.ok) return false;
-    const body = await res.text();
-    return body.trim() === 'ok';
-  } catch {
-    return false;
+  const urls = [`https://${host}/health`, `http://${host}/health`];
+  for (const url of urls) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timer);
+      if (!res.ok) continue;
+      const body = await res.text();
+      if (body.trim() === 'ok') return true;
+    } catch {
+      /* try next */
+    }
   }
+  return false;
 }
 
 async function resolveHostIpv4(host: string): Promise<string | null> {

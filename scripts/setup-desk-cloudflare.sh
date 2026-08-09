@@ -92,7 +92,18 @@ for r in json.load(sys.stdin).get('result', []):
     echo "   Borrando A record ${rid}"
     api DELETE "/zones/${ZONE_ID}/dns_records/${rid}" >/dev/null
   done
-  echo "   (Si el CNAME del túnel no aparece solo, añádelo en Zero Trust → Tunnels → Public Hostname)"
+
+  TUNNEL_CNAME="${TUNNEL_ID}.cfargotunnel.com"
+  EXISTING_CNAME=$(api GET "/zones/${ZONE_ID}/dns_records?type=CNAME&name=${FQDN}")
+  CNAME_ID=$(echo "$EXISTING_CNAME" | python3 -c "import sys,json; r=json.load(sys.stdin).get('result',[]); print(r[0]['id'] if r else '')")
+  CNAME_BODY=$(python3 -c "import json; print(json.dumps({'type':'CNAME','name':'${RECORD_NAME}','content':'${TUNNEL_CNAME}','proxied':True}))")
+  if [[ -n "$CNAME_ID" ]]; then
+    echo "   Actualizando CNAME ${FQDN} → ${TUNNEL_CNAME}"
+    api PUT "/zones/${ZONE_ID}/dns_records/${CNAME_ID}" --data "$CNAME_BODY" >/dev/null
+  else
+    echo "   Creando CNAME ${FQDN} → ${TUNNEL_CNAME} (proxied)"
+    api POST "/zones/${ZONE_ID}/dns_records" --data "$CNAME_BODY" >/dev/null
+  fi
 fi
 
 if [[ "$MODE" == "dns-only" ]]; then
