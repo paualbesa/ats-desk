@@ -1,0 +1,41 @@
+name: Deploy desk-web
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build desk-web
+        run: bash scripts/build-desk-web.sh
+
+      - name: Deploy to ats-server
+        env:
+          ATS_SSH_PRIVATE_KEY: ${{ secrets.ATS_SSH_PRIVATE_KEY }}
+          ATS_SSH_HOST: ${{ vars.ATS_SSH_HOST }}
+          ATS_SSH_PORT: ${{ vars.ATS_SSH_PORT }}
+          ATS_SSH_USER: ${{ vars.ATS_SSH_USER }}
+        run: |
+          if [ -z "$ATS_SSH_PRIVATE_KEY" ]; then
+            echo "ATS_SSH_PRIVATE_KEY secret not configured — skip deploy"
+            exit 0
+          fi
+          HOST="${ATS_SSH_HOST:-server.albesa.tech}"
+          PORT="${ATS_SSH_PORT:-22}"
+          USER="${ATS_SSH_USER:-ats-server}"
+          mkdir -p ~/.ssh
+          echo "$ATS_SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          RSYNC_RSH="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${PORT}"
+          rsync -avz --delete -e "$RSYNC_RSH" \
+            desk-web/dist/ "${USER}@${HOST}:/home/ats-server/www/desk.albesa.tech/"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p "${PORT}" "${USER}@${HOST}" \
+            'cd /home/ats-server/albesa/ats-desk && git fetch origin main && git reset --hard origin/main && pm2 delete desk-web 2>/dev/null || true && DESK_WEB_PORT=3080 pm2 start scripts/ecosystem.desk-web.config.cjs && pm2 save'
