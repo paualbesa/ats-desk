@@ -7,51 +7,54 @@ import {
 } from '@/src/components/RemoteToolbar';
 import {
   buildDeskWebSessionUrl,
+  buildDeskWebViewUri,
   ensureDeskWebClient,
 } from '@/src/remote/deskWebClient';
 import { WORKER_POLYFILL_SCRIPT } from '@/src/remote/workerPolyfill';
 import { useTheme } from '@/src/theme/ThemeContext';
-import { useKeepAwake } from 'expo-keep-awake';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { AtsDeskLoader } from '@/src/components/AtsDeskLoader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView, type WebViewNavigation } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function RemoteSessionScreen() {
-  // Mantener la pantalla encendida durante toda la sesión remota (evita cortes/lag por sleep).
-  useKeepAwake();
   const { id, password } = useLocalSearchParams<{ id: string; password?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const webRef = useRef<WebView>(null);
 
-  const [webBase, setWebBase] = useState<string | null>(null);
+  const [webUri, setWebUri] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('Preparando cliente remoto…');
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [toolbarVisible, setToolbarVisible] = useState(true);
   const [touchMode, setTouchMode] = useState<TouchMode>('touch');
   const [zoom, setZoom] = useState<ZoomMode>('fit');
-
-  const [sessionHash, setSessionHash] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+
   const retries = useRef(0);
   const MAX_RETRIES = 4;
   const CONNECT_TIMEOUT_MS = 45000;
 
   useEffect(() => {
-    if (!webBase || !sessionHash || error) return;
+    if (!webUri || error) return;
     const timer = setTimeout(() => {
       if (status !== 'Sesión remota activa') {
         setError('Tiempo de conexión agotado. Comprueba red o ID remoto.');
       }
     }, CONNECT_TIMEOUT_MS);
     return () => clearTimeout(timer);
-  }, [webBase, sessionHash, error, status, reloadKey]);
+  }, [webUri, error, status, reloadKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,8 +65,7 @@ export default function RemoteSessionScreen() {
           buildDeskWebSessionUrl(String(id ?? ''), password ? String(password) : undefined),
         ]);
         if (!cancelled) {
-          setWebBase(base);
-          setSessionHash(hash);
+          setWebUri(buildDeskWebViewUri(base, hash));
           setStatus('Conectando…');
         }
       } catch (e) {
@@ -75,7 +77,7 @@ export default function RemoteSessionScreen() {
     return () => {
       cancelled = true;
     };
-  }, [id, password]);
+  }, [id, password, reloadKey]);
 
   const onNavChange = useCallback((nav: WebViewNavigation) => {
     if (nav.loading) return;
@@ -84,8 +86,6 @@ export default function RemoteSessionScreen() {
 
   const onWebError = useCallback((syntheticEvent: { nativeEvent: { description?: string } }) => {
     const desc = syntheticEvent.nativeEvent.description ?? 'Error de conexión';
-    // Reintento automático con backoff antes de rendirse: mejora la robustez ante
-    // cortes de red o arranques lentos del servidor de relay.
     if (retries.current < MAX_RETRIES) {
       retries.current += 1;
       setStatus(`Reintentando conexión (${retries.current}/${MAX_RETRIES})…`);
@@ -99,17 +99,16 @@ export default function RemoteSessionScreen() {
   const retryNow = useCallback(() => {
     retries.current = 0;
     setError('');
+    setWebUri(null);
     setStatus('Conectando…');
     setReloadKey((k) => k + 1);
   }, []);
 
   const injectKey = useCallback((code: string) => {
-    // Enviar keydown + keyup (un solo keydown no lo procesan bien muchos clientes) al canvas remoto y a window.
     const js = `(function(){try{var t=document.querySelector('canvas')||document.activeElement||document.body;['keydown','keyup'].forEach(function(type){var ev={key:'${code}',code:'${code}',bubbles:true};try{t.dispatchEvent(new KeyboardEvent(type,ev));}catch(e){}try{window.dispatchEvent(new KeyboardEvent(type,ev));}catch(e){}});}catch(e){}})();true;`;
     webRef.current?.injectJavaScript(js);
   }, []);
 
-  // Zoom real del lienzo remoto: 'fit' quita el escalado; '100'/'150' escala el canvas por CSS.
   const applyZoom = useCallback((z: ZoomMode) => {
     const scale = z === '150' ? 1.5 : z === '100' ? 1 : 0;
     const js = `(function(){try{var id='ats-zoom-style';var el=document.getElementById(id);if(${scale === 0}){if(el)el.remove();return;}if(!el){el=document.createElement('style');el.id=id;document.head.appendChild(el);}el.textContent='canvas{transform-origin:0 0 !important;transform:scale(${scale}) !important;image-rendering:auto;}';}catch(e){}})();true;`;
@@ -117,8 +116,8 @@ export default function RemoteSessionScreen() {
   }, []);
 
   useEffect(() => {
-    if (webBase && sessionHash) applyZoom(zoom);
-  }, [zoom, webBase, sessionHash, applyZoom]);
+    if (webUri) applyZoom(zoom);
+  }, [zoom, webUri, applyZoom]);
 
   const injectText = useCallback((text: string) => {
     const safe = JSON.stringify(text);
@@ -144,7 +143,7 @@ export default function RemoteSessionScreen() {
     );
   }
 
-  if (!webBase || !sessionHash) {
+  if (!webUri) {
     return (
       <View style={[styles.center, { paddingTop: insets.top, backgroundColor: colors.bgDark }]}>
         <AtsDeskLoader label={status} />
@@ -182,9 +181,9 @@ export default function RemoteSessionScreen() {
       </View>
 
       <WebView
-        key={reloadKey}
+        key={`${reloadKey}-${webUri}`}
         ref={webRef}
-        source={{ uri: `${webBase}${sessionHash}` }}
+        source={{ uri: webUri }}
         style={styles.web}
         onNavigationStateChange={onNavChange}
         onError={onWebError}
@@ -199,9 +198,7 @@ export default function RemoteSessionScreen() {
         originWhitelist={['*']}
         setSupportMultipleWindows={false}
         onHttpError={() => setStatus('Error HTTP en cliente remoto')}
-        // Fluidez: composición por GPU y sin scroll/overscroll que reste framerate.
         androidLayerType="hardware"
-        renderToHardwareTextureAndroid
         cacheEnabled
         overScrollMode="never"
         bounces={false}
@@ -238,7 +235,6 @@ export default function RemoteSessionScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#000' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  loadingText: { marginTop: 14, fontSize: 14 },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',

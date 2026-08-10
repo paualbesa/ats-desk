@@ -6,7 +6,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { unzip } from 'fflate';
 
 const CACHE_DIR = `${FileSystem.cacheDirectory}rustdesk-web/`;
-const READY_MARKER = `${CACHE_DIR}.ready_v4`;
+const READY_MARKER = `${CACHE_DIR}.ready_v5`;
 
 function uint8ToBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -95,7 +95,17 @@ export async function ensureDeskWebClient(): Promise<string> {
   return `file://${CACHE_DIR}index.html`;
 }
 
-/** URL hash RustDesk. Usa nginx si está activo; si no, IP:21116 → ws directo :21118. */
+/** URL completa para WebView (base + hash RustDesk). */
+export function buildDeskWebViewUri(base: string, hash: string): string {
+  const trimmed = base.trim();
+  if (trimmed.includes('#')) {
+    const [root, existing] = trimmed.split('#');
+    return `${root}${hash || `#${existing}`}`;
+  }
+  return `${trimmed}${hash}`;
+}
+
+/** Hash RustDesk (#/id/r@host?key=…). */
 export async function buildDeskWebSessionUrl(peerId: string, password?: string): Promise<string> {
   const id = peerId.replace(/\D/g, '').slice(0, 6);
   const relayHost = await resolveDeskWebRelayHost();

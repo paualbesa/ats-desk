@@ -11,7 +11,6 @@ export const DeskConfig = {
     'RoldVL1Npn0FLv274f1N6zlbWlhZKoOiYUvObjDLomo=',
   /** Host HTTP/WSS (túnel CF). Distinto del ID server RustDesk. */
   webSocketHost: process.env.EXPO_PUBLIC_DESK_WS_HOST ?? 'desk.albesa.tech',
-  /** Cliente web alojado (evita file:// y errores Worker en RN). */
-  webClientBase:
-    process.env.EXPO_PUBLIC_DESK_WEB_BASE ?? 'https://desk.albesa.tech/rustdesk-web',
+  /** Vacío = cliente local (file://) con polyfill Worker; HTTPS opcional vía env. */
+  webClientBase: process.env.EXPO_PUBLIC_DESK_WEB_BASE ?? '',
 } as const;
