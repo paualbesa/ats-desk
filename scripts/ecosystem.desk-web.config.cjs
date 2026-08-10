@@ -8,8 +8,7 @@ module.exports = {
   apps: [
     {
       name: 'desk-web',
-      script: 'npx',
-      args: `serve -s ${path.join(ROOT, 'desk-web/dist')} -l ${PORT}`,
+      script: path.join(ROOT, 'scripts/serve-desk-web.cjs'),
       cwd: ROOT,
       env: {
         NODE_ENV: 'production',

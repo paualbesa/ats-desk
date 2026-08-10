@@ -1,3 +1,4 @@
+import { ConnectPasswordModal } from '@/src/components/ConnectPasswordModal';
 import { SquircleGlass } from '@/src/components/SquircleGlass';
 import {
   formatDeskId,
@@ -122,6 +123,7 @@ export default function HomeScreen() {
 
   const [remoteId, setRemoteId] = useState('');
   const [segment, setSegment] = useState<Segment>('recientes');
+  const [passwordModal, setPasswordModal] = useState<{ id: string } | null>(null);
 
   const accentColor = accent(online);
   const titleColor = mode === 'albesa' ? colors.accent : accentColor;
@@ -136,21 +138,38 @@ export default function HomeScreen() {
     return peers.slice(0, 20);
   }, [segment, peers, favorites]);
 
+  const startRemote = (id: string, password?: string) => {
+    const params: { id: string; password?: string } = { id };
+    if (password) params.password = password;
+    router.push({ pathname: '/remote/[id]', params });
+  };
+
   const connect = async () => {
     const id = normalizeDeskId(remoteId);
     if (!isValidDeskId(id)) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     await addPeer(id);
-    router.push({ pathname: '/remote/[id]', params: { id } });
+    setPasswordModal({ id });
   };
 
   const openPeer = (id: string) => {
     Haptics.selectionAsync();
-    router.push({ pathname: '/remote/[id]', params: { id } });
+    setPasswordModal({ id });
   };
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
+      <ConnectPasswordModal
+        visible={passwordModal !== null}
+        peerId={passwordModal ? formatDeskId(passwordModal.id) : ''}
+        onCancel={() => setPasswordModal(null)}
+        onConnect={(password) => {
+          if (!passwordModal) return;
+          const target = passwordModal.id;
+          setPasswordModal(null);
+          startRemote(target, password);
+        }}
+      />
       <LinearGradient colors={colors.gradient} style={StyleSheet.absoluteFill} />
 
       <BlurView

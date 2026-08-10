@@ -5,9 +5,11 @@ import {
   type TouchMode,
   type ZoomMode,
 } from '@/src/components/RemoteToolbar';
+import { buildAutoConnectInjectScript } from '@/src/remote/autoConnectScript';
 import {
   buildDeskWebSessionUrl,
   buildDeskWebViewUri,
+  buildSessionPeerId,
   ensureDeskWebClient,
 } from '@/src/remote/deskWebClient';
 import { WORKER_POLYFILL_SCRIPT } from '@/src/remote/workerPolyfill';
@@ -23,8 +25,9 @@ import {
 } from 'react-native';
 import { AtsDeskLoader } from '@/src/components/AtsDeskLoader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { WebView, type WebViewNavigation } from 'react-native-webview';
+import { WebView, type WebViewMessageEvent, type WebViewNavigation } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
+import { resolveDeskWebRelayHost } from '@/src/config/deskWs';
 
 export default function RemoteSessionScreen() {
   const { id, password } = useLocalSearchParams<{ id: string; password?: string }>();
@@ -34,6 +37,7 @@ export default function RemoteSessionScreen() {
   const webRef = useRef<WebView>(null);
 
   const [webUri, setWebUri] = useState<string | null>(null);
+  const [sessionPeer, setSessionPeer] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('Preparando cliente remoto…');
   const [keyboardOpen, setKeyboardOpen] = useState(false);
@@ -41,30 +45,34 @@ export default function RemoteSessionScreen() {
   const [touchMode, setTouchMode] = useState<TouchMode>('touch');
   const [zoom, setZoom] = useState<ZoomMode>('fit');
   const [reloadKey, setReloadKey] = useState(0);
+  const [sessionActive, setSessionActive] = useState(false);
 
   const retries = useRef(0);
   const MAX_RETRIES = 4;
   const CONNECT_TIMEOUT_MS = 45000;
 
+  const pass = password ? String(password) : undefined;
+
   useEffect(() => {
-    if (!webUri || error) return;
+    if (!webUri || error || sessionActive) return;
     const timer = setTimeout(() => {
-      if (status !== 'Sesión remota activa') {
-        setError('Tiempo de conexión agotado. Comprueba red o ID remoto.');
-      }
+      setError('Tiempo de conexión agotado. Comprueba red o ID remoto.');
     }, CONNECT_TIMEOUT_MS);
     return () => clearTimeout(timer);
-  }, [webUri, error, status, reloadKey]);
+  }, [webUri, error, sessionActive, reloadKey]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
+        const relayHost = await resolveDeskWebRelayHost();
+        const peer = buildSessionPeerId(String(id ?? ''), relayHost, pass);
         const [base, hash] = await Promise.all([
           ensureDeskWebClient(),
-          buildDeskWebSessionUrl(String(id ?? ''), password ? String(password) : undefined),
+          buildDeskWebSessionUrl(String(id ?? ''), pass),
         ]);
         if (!cancelled) {
+          setSessionPeer(peer);
           setWebUri(buildDeskWebViewUri(base, hash));
           setStatus('Conectando…');
         }
@@ -77,12 +85,34 @@ export default function RemoteSessionScreen() {
     return () => {
       cancelled = true;
     };
-  }, [id, password, reloadKey]);
+  }, [id, pass, reloadKey]);
 
   const onNavChange = useCallback((nav: WebViewNavigation) => {
-    if (nav.loading) return;
-    if (nav.url.includes('#/')) setStatus('Sesión remota activa');
+    if (nav.loading || sessionActive) return;
+    if (nav.url.includes('#/')) setStatus('Estableciendo sesión…');
+  }, [sessionActive]);
+
+  const onWebMessage = useCallback((event: WebViewMessageEvent) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data) as { type?: string; message?: string };
+      if (data.type === 'frame') {
+        setSessionActive(true);
+        setStatus('Sesión remota activa');
+      } else if (data.type === 'connecting') {
+        setStatus('Conectando al escritorio…');
+      } else if (data.type === 'error') {
+        setError(data.message ?? 'Error de conexión');
+      }
+    } catch {
+      /* ignore */
+    }
   }, []);
+
+  const onWebLoadEnd = useCallback(() => {
+    if (!sessionPeer) return;
+    const js = buildAutoConnectInjectScript(sessionPeer, pass);
+    webRef.current?.injectJavaScript(js);
+  }, [sessionPeer, pass]);
 
   const onWebError = useCallback((syntheticEvent: { nativeEvent: { description?: string } }) => {
     const desc = syntheticEvent.nativeEvent.description ?? 'Error de conexión';
@@ -98,8 +128,10 @@ export default function RemoteSessionScreen() {
 
   const retryNow = useCallback(() => {
     retries.current = 0;
+    setSessionActive(false);
     setError('');
     setWebUri(null);
+    setSessionPeer(null);
     setStatus('Conectando…');
     setReloadKey((k) => k + 1);
   }, []);
@@ -186,6 +218,8 @@ export default function RemoteSessionScreen() {
         source={{ uri: webUri }}
         style={styles.web}
         onNavigationStateChange={onNavChange}
+        onLoadEnd={onWebLoadEnd}
+        onMessage={onWebMessage}
         onError={onWebError}
         injectedJavaScriptBeforeContentLoaded={WORKER_POLYFILL_SCRIPT}
         allowsInlineMediaPlayback
