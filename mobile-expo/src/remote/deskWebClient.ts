@@ -6,7 +6,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { unzip } from 'fflate';
 
 const CACHE_DIR = `${FileSystem.cacheDirectory}rustdesk-web/`;
-const READY_MARKER = `${CACHE_DIR}.ready_v5`;
+const READY_MARKER = `${CACHE_DIR}.ready_v6`;
 
 function uint8ToBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -17,17 +17,48 @@ function uint8ToBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
+function buildCustomConfigIni(): string {
+  const [host, port] = DeskConfig.rendezvousServer.split(':');
+  const relay = DeskConfig.relayServer;
+  return [
+    '[default-settings]',
+    `custom-rendezvous-server=${host}:${port || '21116'}`,
+    `relay-server=${relay}`,
+    `key=${DeskConfig.serverKey}`,
+    'force-always-relay=Y',
+    '',
+  ].join('\n');
+}
+
+function buildMobileShellHtml(): string {
+  const customIni = buildCustomConfigIni();
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <base href="./" />
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    #ats-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+    #div-background, #root { display: none !important; }
+  </style>
+  <script id="ats-worker-polyfill">${WORKER_POLYFILL_SCRIPT}</script>
+  <script id="custom-config" type="text/plain">${customIni}</script>
+  <script type="module" crossorigin src="js/dist/index.js"></script>
+  <link rel="modulepreload" href="js/dist/vendor.js" />
+</head>
+<body>
+  <canvas id="ats-canvas"></canvas>
+  <div id="root"></div>
+</body>
+</html>`;
+}
+
 function patchIndexHtml(html: string): string {
-  let patched = html.replace(/<base\s+href="[^"]*"\s*\/?>/i, '<base href="./" />');
-  if (!patched.includes('ats-worker-polyfill')) {
-    const inject = `<script id="ats-worker-polyfill">${WORKER_POLYFILL_SCRIPT}</script>`;
-    if (/<head[^>]*>/i.test(patched)) {
-      patched = patched.replace(/<head([^>]*)>/i, `<head$1>${inject}`);
-    } else {
-      patched = inject + patched;
-    }
-  }
-  return patched;
+  // Reemplazar por shell móvil mínimo (sin Flutter/service worker ni UI duplicada).
+  if (html.includes('ats-mobile-shell')) return html;
+  return buildMobileShellHtml().replace('<html>', '<html data-ats-mobile-shell="1">');
 }
 
 async function patchExtractedClient() {
@@ -41,11 +72,26 @@ async function patchExtractedClient() {
   }
 }
 
+/** Valida base remota: debe apuntar a rustdesk-web, no a la SPA desk-web. */
+export function normalizeWebClientBase(raw?: string): string | null {
+  const trimmed = raw?.trim();
+  if (!trimmed) return null;
+  const lower = trimmed.toLowerCase().replace(/\/$/, '');
+  if (lower.endsWith('/rustdesk-web')) return lower;
+  // Rechazar raíz desk.albesa.tech — carga la SPA React (UI duplicada).
+  if (/^https?:\/\/[^/]+$/i.test(lower) || lower.endsWith('/index.html')) {
+    console.warn('[ATS] webClientBase ignorado (SPA desk-web):', trimmed);
+    return null;
+  }
+  if (lower.includes('/rustdesk-web')) return lower.split('/rustdesk-web')[0] + '/rustdesk-web';
+  return null;
+}
+
 /** Extrae el cliente web RustDesk (bundled zip) al cache del dispositivo. */
 export async function ensureDeskWebClient(): Promise<string> {
-  const remote = DeskConfig.webClientBase?.trim();
+  const remote = normalizeWebClientBase(DeskConfig.webClientBase);
   if (remote) {
-    return remote.replace(/\/$/, '') + '/index.html';
+    return `${remote}/index.html`;
   }
 
   const marker = await FileSystem.getInfoAsync(READY_MARKER);
@@ -99,17 +145,27 @@ export async function ensureDeskWebClient(): Promise<string> {
 export function buildDeskWebViewUri(base: string, hash: string): string {
   const trimmed = base.trim();
   if (trimmed.includes('#')) {
-    const [root, existing] = trimmed.split('#');
-    return `${root}${hash || `#${existing}`}`;
+    const [root] = trimmed.split('#');
+    return `${root}${hash.startsWith('#') ? hash : `#${hash}`}`;
   }
-  return `${trimmed}${hash}`;
+  return `${trimmed}${hash.startsWith('#') ? hash : `#${hash}`}`;
+}
+
+/** ID de sesión RustDesk (id/r@host?key=…). */
+export function buildSessionPeerId(
+  peerId: string,
+  relayHost: string,
+  password?: string,
+): string {
+  const id = peerId.replace(/\D/g, '').slice(0, 6);
+  const key = encodeURIComponent(DeskConfig.serverKey);
+  const pass = password ? `&password=${encodeURIComponent(password)}` : '';
+  return `${id}/r@${relayHost}?key=${key}${pass}`;
 }
 
 /** Hash RustDesk (#/id/r@host?key=…). */
 export async function buildDeskWebSessionUrl(peerId: string, password?: string): Promise<string> {
-  const id = peerId.replace(/\D/g, '').slice(0, 6);
   const relayHost = await resolveDeskWebRelayHost();
-  const key = encodeURIComponent(DeskConfig.serverKey);
-  const pass = password ? `&password=${encodeURIComponent(password)}` : '';
-  return `#/${id}/r@${relayHost}?key=${key}${pass}`;
+  const peer = buildSessionPeerId(peerId, relayHost, password);
+  return `#/${peer}`;
 }
