@@ -1,0 +1,5 @@
+# Claves públicas para acceso SSH del Cloud Agent / CI (añadir a ~/.ssh/authorized_keys de ats-server)
+# Ejecutar en el servidor: bash scripts/server/install-cloud-agent-ssh.sh
+
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPqiJsBjAsv4KymedFcUR891X1lgC90DW8yMtjcHJ/p0 cursor-cloud-agent
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF1xpJeo9eJ+qQp3WBllqMvm40HcLstPD/BUXSM0SEEB cursor-cloud-ats-desk

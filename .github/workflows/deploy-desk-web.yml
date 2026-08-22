@@ -14,6 +14,11 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install cloudflared
+        run: |
+          curl -sL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
+          chmod +x cloudflared
+
       - name: Build desk-web
         run: bash scripts/build-desk-web.sh
 
@@ -23,19 +28,42 @@ jobs:
           ATS_SSH_HOST: ${{ vars.ATS_SSH_HOST }}
           ATS_SSH_PORT: ${{ vars.ATS_SSH_PORT }}
           ATS_SSH_USER: ${{ vars.ATS_SSH_USER }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: |
           if [ -z "$ATS_SSH_PRIVATE_KEY" ]; then
             echo "ATS_SSH_PRIVATE_KEY secret not configured — skip deploy"
             exit 0
           fi
           HOST="${ATS_SSH_HOST:-server.albesa.tech}"
-          PORT="${ATS_SSH_PORT:-22}"
+          PORT="${ATS_SSH_PORT:-2222}"
           USER="${ATS_SSH_USER:-ats-server}"
           mkdir -p ~/.ssh
           echo "$ATS_SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          RSYNC_RSH="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${PORT}"
+
+          CF_ARGS=()
+          if [ -n "$CF_ACCESS_CLIENT_ID" ] && [ -n "$CF_ACCESS_CLIENT_SECRET" ]; then
+            CF_ARGS+=(--service-token-id "$CF_ACCESS_CLIENT_ID" --service-token-secret "$CF_ACCESS_CLIENT_SECRET")
+          fi
+
+          if [ "$PORT" = "2222" ] || [ "$HOST" = "127.0.0.1" ]; then
+            ./cloudflared access tcp --hostname server.albesa.tech --url 127.0.0.1:2222 "${CF_ARGS[@]}" &
+            CF_PID=$!
+            sleep 4
+            SSH_TARGET="127.0.0.1"
+            SSH_PORT=2222
+          else
+            SSH_TARGET="$HOST"
+            SSH_PORT="$PORT"
+            CF_PID=""
+          fi
+
+          SSH_OPTS="-i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p ${SSH_PORT}"
+          RSYNC_RSH="ssh ${SSH_OPTS}"
           rsync -avz --delete -e "$RSYNC_RSH" \
-            desk-web/dist/ "${USER}@${HOST}:/home/ats-server/www/desk.albesa.tech/"
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p "${PORT}" "${USER}@${HOST}" \
-            'cd /home/ats-server/albesa/ats-desk && git fetch origin main && git reset --hard origin/main && pm2 delete desk-web 2>/dev/null || true && DESK_WEB_PORT=3080 pm2 start scripts/ecosystem.desk-web.config.cjs && pm2 save'
+            desk-web/dist/ "${USER}@${SSH_TARGET}:/home/ats-server/www/desk.albesa.tech/"
+          ssh ${SSH_OPTS} "${USER}@${SSH_TARGET}" \
+            'cd /home/ats-server/albesa/ats-desk && git fetch origin main && git reset --hard origin/main && bash scripts/server/install-cloud-agent-ssh.sh && bash scripts/server/fix-remote-black-screen.sh && pm2 delete desk-web 2>/dev/null || true && DESK_WEB_PORT=3080 pm2 start scripts/ecosystem.desk-web.config.cjs && pm2 save'
+
+          if [ -n "$CF_PID" ]; then kill "$CF_PID" 2>/dev/null || true; fi
