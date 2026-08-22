@@ -13,6 +13,7 @@
     "hide-proxy-settings": "Y",
     "hide-websocket-settings": "Y",
     "hide-powered-by-me": "Y",
-    "hide-help-cards": "Y"
+    "hide-help-cards": "Y",
+    "allow-d3d-render": "N"
   }
 }
