@@ -1,0 +1,11 @@
+{
+  "build": {
+    "dockerfile": null
+  },
+  "secrets": [
+    "ATS_SSH_PRIVATE_KEY",
+    "CF_ACCESS_CLIENT_ID",
+    "CF_ACCESS_CLIENT_SECRET"
+  ],
+  "install": "bash scripts/setup-agent-ssh.sh"
+}

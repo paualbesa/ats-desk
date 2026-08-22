@@ -1,5 +1,13 @@
 # Scripts del servidor (`ats-server@server.albesa.tech`)
 
+## Túnel Cloudflare caído (530 / error 1033)
+
+Si `curl https://server.albesa.tech` devuelve 530, el `cloudflared` del PC oficina no está conectado:
+
+```bash
+bash scripts/server/fix-cloudflared-tunnel.sh
+```
+
 ## Acceso SSH (Cloud Agent / CI)
 
 1. **Una vez** desde tu PC (ya tienes `cloudflared access ssh`):
